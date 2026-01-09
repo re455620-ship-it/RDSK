@@ -422,8 +422,7 @@ btn(tabs.Troll, "Spin Player", 210).MouseButton1Click:Connect(function()
             end
         end
     end
-end)
--------------------- ABAS (ATUALIZADO) --------------------
+end)-------------------- ABAS (ATUALIZADO) --------------------
 -- Adicione "Jogos" na sua tabela de abas
 tabs.Jogos = newTab()
 tabButton("🎮 Jogos", 190, tabs.Jogos)
