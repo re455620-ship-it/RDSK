@@ -500,7 +500,16 @@ local function executarEscapeLava()
         autoFarmActive = not autoFarmActive
         autoBtn.Text = autoFarmActive and "Automatização: LIGADO" or "Automatização: DESLIGADO"
         autoBtn.BackgroundColor3 = autoFarmActive and Color3.fromRGB(0, 200, 0) or Color3.fromRGB(200, 0, 0)
-    end)
+    end) -------------------- JOGOS 🎮 (CONTINUAÇÃO) --------------------
+
+-- Botão do Gg Hub (Abaixo do Escape da Lava)
+-- Usei y = 50 para ele ficar logo abaixo do primeiro botão
+btn(tabs.Jogos, "Gg Hub (Undertale Zombies)", 50).MouseButton1Click:Connect(function()
+    -- Carrega o script que você salvou no GitHub
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/re455620-ship-it/RDSK/main/Admin.lua"))()
+    print("Gg Hub ativado com sucesso!")
+end)
+	
 
     -- Criar botões manuais
     local currentY = 80
