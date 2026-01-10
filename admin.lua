@@ -550,5 +550,11 @@ btn(tabs.Jogos, "Gg Hub (Undertale Zombies)", 50).MouseButton1Click:Connect(func
     -- Carrega o script que você salvou no GitHub
     loadstring(game:HttpGet("https://raw.githubusercontent.com/re455620-ship-it/RDSK/main/Admin.lua"))()
     print("Gg Hub ativado com sucesso!")
+end)-- Botão do GG HUB UPDATE no Administrador 2.1
+btn(tabs.Jogos, "Gg Hub (Update Autofarm) 🎮", 50).MouseButton1Click:Connect(function()
+    -- Certifique-se de que o link abaixo é o do seu GitHub atualizado
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/re455620-ship-it/RDSK/main/Admin.lua"))()
+    print("Gg Hub Update carregado com sucesso!")
 end)
+
 
