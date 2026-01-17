@@ -555,7 +555,7 @@ btn(tabs.Jogos, "Gg Hub (Update Autofarm) 🎮", 50).MouseButton1Click:Connect(f
     -- Certifique-se de que o link abaixo é o do seu GitHub atualizado
     loadstring(game:HttpGet("https://raw.githubusercontent.com/re455620-ship-it/RDSK/main/Admin.lua"))()
     print("Gg Hub Update carregado com sucesso!")
-end) -------------------- SISTEMA AUTOMÁTICO DE NOVA ABA --------------------
+end)-------------------- SISTEMA AUTOMÁTICO DE NOVA ABA --------------------
 
 -- 1. Identificar onde as abas ficam (procura o menu lateral automaticamente)
 local Sidebar = MainFrame:FindFirstChild("Sidebar") or MainFrame:FindFirstChild("ScrollingFrame") or MainFrame:FindFirstChildOfClass("Frame")
@@ -582,9 +582,7 @@ AbaBotao.MouseButton1Click:Connect(function()
         if v:IsA("ScrollingFrame") or v:IsA("Frame") then v.Visible = false end 
     end
     tabs.MeusScripts.Visible = true
-end)
-
--------------------- BOTÕES DA AMOSTRA --------------------
+end)------------------- BOTÕES DA AMOSTRA --------------------
 
 -- RDSK Admin
 btn(tabs.MeusScripts, "RDSK Admin (Principal) 📂", 0).MouseButton1Click:Connect(function()
