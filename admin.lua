@@ -555,6 +555,51 @@ btn(tabs.Jogos, "Gg Hub (Update Autofarm) 🎮", 50).MouseButton1Click:Connect(f
     -- Certifique-se de que o link abaixo é o do seu GitHub atualizado
     loadstring(game:HttpGet("https://raw.githubusercontent.com/re455620-ship-it/RDSK/main/Admin.lua"))()
     print("Gg Hub Update carregado com sucesso!")
+end) -------------------- SISTEMA AUTOMÁTICO DE NOVA ABA --------------------
+
+-- 1. Identificar onde as abas ficam (procura o menu lateral automaticamente)
+local Sidebar = MainFrame:FindFirstChild("Sidebar") or MainFrame:FindFirstChild("ScrollingFrame") or MainFrame:FindFirstChildOfClass("Frame")
+
+-- 2. Criar a página da aba (onde ficam os botões)
+tabs.MeusScripts = Instance.new("ScrollingFrame", ContentFrame or Content or MainFrame)
+tabs.MeusScripts.Size = UDim2.new(1, 0, 1, 0)
+tabs.MeusScripts.Visible = false
+tabs.MeusScripts.BackgroundTransparency = 1
+Instance.new("UIListLayout", tabs.MeusScripts).Padding = UDim.new(0, 5)
+
+-- 3. Criar o BOTÃO na lateral para você clicar
+local AbaBotao = Instance.new("TextButton", Sidebar)
+AbaBotao.Size = UDim2.new(1, 0, 0, 40)
+AbaBotao.BackgroundColor3 = Color3.fromRGB(180, 0, 0) -- Vermelho
+AbaBotao.Text = "📂 MEUS SCRIPTS"
+AbaBotao.TextColor3 = Color3.new(1, 1, 1)
+AbaBotao.Font = Enum.Font.SourceSansBold
+AbaBotao.TextSize = 14
+
+-- 4. Função de clique para abrir a aba
+AbaBotao.MouseButton1Click:Connect(function()
+    for _, v in pairs(tabs) do 
+        if v:IsA("ScrollingFrame") or v:IsA("Frame") then v.Visible = false end 
+    end
+    tabs.MeusScripts.Visible = true
 end)
+
+-------------------- BOTÕES DA AMOSTRA --------------------
+
+-- RDSK Admin
+btn(tabs.MeusScripts, "RDSK Admin (Principal) 📂", 0).MouseButton1Click:Connect(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/re455620-ship-it/RDSK/main/admin.lua"))()
+end)
+
+-- Gg Hub Zombies
+btn(tabs.MeusScripts, "Gg Hub (Undertale Zombies) 📂", 50).MouseButton1Click:Connect(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/re455620-ship-it/RDSK/main/Admin.lua"))()
+end)
+
+-- Gg Hub Update
+btn(tabs.MeusScripts, "Gg Hub (Update Autofarm) 📂", 100).MouseButton1Click:Connect(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/re455620-ship-it/RDSK/main/Admin.lua"))()
+end)
+
 
 
