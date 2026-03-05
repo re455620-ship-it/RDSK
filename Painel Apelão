@@ -1085,3 +1085,267 @@ Tab6:CreateToggle({
       end
    end,
 })
+-- ==============================================
+-- ABA 7: ABA PARA ATIRADORES
+-- ==============================================
+local Tab7 = Window:CreateTab("aba para atiradores", 4483362458)
+
+local mirarNaCabeca = false
+
+local function getNearestPlayer()
+    local nearest = nil
+    local minDist = math.huge
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
+                if p.Character.Humanoid.Health > 0 then
+                    local dist = (char.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        nearest = p
+                    end
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+-- 1 AIMBOT (Gira o corpo)
+local aimbotAtiradorAtivo = false
+local aimbotAtiradorConn = nil
+
+Tab7:CreateToggle({
+   Name = "1 Aimbot",
+   CurrentValue = false,
+   Flag = "AimbotAtiradorToggle",
+   Callback = function(Value)
+      aimbotAtiradorAtivo = Value
+      if aimbotAtiradorAtivo then
+         aimbotAtiradorConn = RunService.RenderStepped:Connect(function()
+            local target = getNearestPlayer()
+            local char = player.Character
+            if target and char and char:FindFirstChild("HumanoidRootPart") and target.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                local targetPart = target.Character.HumanoidRootPart
+                
+                if mirarNaCabeca and target.Character:FindFirstChild("Head") then
+                    targetPart = target.Character.Head
+                end
+                
+                local tPos = targetPart.Position
+                hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
+            end
+         end)
+      else
+         if aimbotAtiradorConn then aimbotAtiradorConn:Disconnect() end
+      end
+   end,
+})
+
+-- 2 AIMLOCK (Trava a mira/câmera)
+local aimlockAtivo = false
+local aimlockConn = nil
+
+Tab7:CreateToggle({
+   Name = "2 Aimlock",
+   CurrentValue = false,
+   Flag = "AimlockToggle",
+   Callback = function(Value)
+      aimlockAtivo = Value
+      if aimlockAtivo then
+         aimlockConn = RunService.RenderStepped:Connect(function()
+            local target = getNearestPlayer()
+            if target and target.Character then
+                local targetPart = target.Character:FindFirstChild("HumanoidRootPart")
+                
+                if mirarNaCabeca and target.Character:FindFirstChild("Head") then
+                    targetPart = target.Character.Head
+                end
+                
+                if targetPart then
+                    local cam = workspace.CurrentCamera
+                    cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position)
+                end
+            end
+         end)
+      else
+         if aimlockConn then aimlockConn:Disconnect() end
+      end
+   end,
+})
+
+-- 3 ESP (Permanente Vermelho)
+local espAtivo = false
+local espObjects = {}
+
+local function createESP(plr)
+    if espObjects[plr.Name] then return end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESPRed"
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0.1
+    
+    espObjects[plr.Name] = highlight
+    
+    if plr.Character then
+        highlight.Parent = plr.Character
+    end
+    
+    plr.CharacterAdded:Connect(function(newChar)
+        if espAtivo then
+            task.wait(0.5)
+            local hl = espObjects[plr.Name]
+            if hl then
+                hl.Parent = newChar
+            end
+        end
+    end)
+end
+
+local function removeESP()
+    for name, highlight in pairs(espObjects) do
+        if highlight then highlight:Destroy() end
+    end
+    espObjects = {}
+end
+
+Tab7:CreateToggle({
+   Name = "3 ESP (Permanente)",
+   CurrentValue = false,
+   Flag = "ESPToggle",
+   Callback = function(Value)
+      espAtivo = Value
+      if espAtivo then
+         for _, p in pairs(Players:GetPlayers()) do
+            if p ~= player then
+               createESP(p)
+            end
+         end
+         Players.PlayerAdded:Connect(function(p)
+            if espAtivo then createESP(p) end
+         end)
+      else
+         removeESP()
+      end
+   end,
+})
+
+-- 4 CAPA
+Tab7:CreateToggle({
+   Name = "4 Capa (Forçar mira na cabeça)",
+   CurrentValue = false,
+   Flag = "CapaToggle",
+   Callback = function(Value)
+      mirarNaCabeca = Value
+   end,
+})
+
+-- ==============================================
+-- ABA 8: ATIRADOR AIMBOT
+-- ==============================================
+local Tab8 = Window:CreateTab("atirador Aimbot", 4483362458)
+
+local botAutoFarmAtivo = false
+local vim = game:GetService("VirtualInputManager")
+
+Tab8:CreateToggle({
+   Name = "5 Bot (Autofarm - Atirar Automático)",
+   CurrentValue = false,
+   Flag = "BotAutofarmAtirador",
+   Callback = function(Value)
+      botAutoFarmAtivo = Value
+      if botAutoFarmAtivo then
+         spawn(function()
+            while botAutoFarmAtivo do
+               local target = getNearestPlayer()
+               if target and target.Character then
+                  local targetPart = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                  
+                  if targetPart then
+                     -- Trava a câmera no alvo
+                     local cam = workspace.CurrentCamera
+                     cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position)
+                     
+                     -- Simula o clique para atirar
+                     vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                     task.wait(0.05)
+                     vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                  end
+               end
+               task.wait(0.01) -- Tempo de resposta rápido para trocar de alvo instantaneamente
+            end
+         end)
+      end
+   end,
+})
+
+-- ==============================================
+-- ABA 9: CONSTRUA UM BARCO POR TESOURO
+-- ==============================================
+local Tab9 = Window:CreateTab("Construa um barco", 4483362458)
+
+local autoFarmBarcoAtivo = false
+
+Tab9:CreateToggle({
+   Name = "Auto Farm (Teleportes automáticos)",
+   CurrentValue = false,
+   Flag = "AutoFarmBarcoToggle",
+   Callback = function(Value)
+      autoFarmBarcoAtivo = Value
+      
+      if autoFarmBarcoAtivo then
+         spawn(function()
+            while autoFarmBarcoAtivo do
+               local char = player.Character
+               if char and char:FindFirstChild("HumanoidRootPart") then
+                  local hrp = char.HumanoidRootPart
+                  local ws = game:GetService("Workspace")
+                  
+                  -- Função segura para tentar pegar a parte e teleportar
+                  local function tentarTeleporte(caminho, tempoEspera)
+                     if not autoFarmBarcoAtivo then return false end
+                     -- Tenta rodar o caminho sem dar erro se a fase não existir
+                     local sucesso, parte = pcall(function() return caminho() end)
+                     if sucesso and parte and parte:IsA("BasePart") then
+                        hrp.CFrame = parte.CFrame * CFrame.new(0, 5, 0) -- Um pouco acima para não bugar no chão
+                        task.wait(tempoEspera)
+                        return true
+                     end
+                     return false
+                  end
+
+                  -- Sequência de Teleportes (2 Segundos cada)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage1.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage2.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage3.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage4.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage5.DarknessPart end, 2)
+                  
+                  tentarTeleporte(function() return ws.BoatStages.OtherStages.ElectronicStage.DarknessPart end, 2)
+                  
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage7.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage8.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage9.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage10.DarknessPart end, 2)
+
+                  -- Final (5 Segundos)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.TheEnd.DashedLine.Part end, 5)
+               end
+               task.wait(1) -- Aguarda um segundo antes de reiniciar o loop do auto farm inteiro
+            end
+         end)
+      end
+   end,
+})
+
+Rayfield:Notify({
+   Title = "Hub Atualizado",
+   Content = "Abas 7, 8 e 9 carregadas com sucesso!",
+   Duration = 5,
+   Image = 4483362458,
+})
