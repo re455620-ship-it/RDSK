@@ -1349,9 +1349,9 @@ Rayfield:Notify({
    Duration = 5,
    Image = 4483362458,
 }) -- ==============================================
--- ABA 8: BOTS
+-- ABA 10: BOTS
 -- ==============================================
-local Tab8 = Window:CreateTab("Bots", 4483362458)
+local Tab10 = Window:CreateTab("Bots", 4483362458)
 
 -- Aviso logo de cara
 Tab8:CreateLabel("⚠️ AVISO: O USO DE BOTS PODE DAR BANIMENTO PERMANENTE! ⚠️")
@@ -1450,6 +1450,141 @@ Tab8:CreateToggle({
                end
                -- Delay ligeiramente menor (0.05) para o Aimbot corporal não ficar travando
                task.wait(0.05) 
+            end
+         end)
+      end
+   end,
+})
+-- ==============================================
+-- ABA 11: BOT DE GEAR (Ilha)
+-- ==============================================
+local Tab11 = Window:CreateTab("Bot de Gear", 4483362458)
+
+Tab10:CreateLabel("⚠️ AVISO: Uso de Bot. Risco de banimento! ⚠️")
+
+local botGearAtivo = false
+
+-- Função para encontrar o jogador mais perto e o mais longe
+local function getPlayersByDistance()
+    local closest = nil
+    local furthest = nil
+    local minDist = math.huge
+    local maxDist = 0
+    
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil, nil end
+    local myPos = char.HumanoidRootPart.Position
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
+            if p.Character.Humanoid.Health > 0 then
+                local dist = (myPos - p.Character.HumanoidRootPart.Position).Magnitude
+                
+                if dist < minDist then
+                    minDist = dist
+                    closest = p.Character
+                end
+                
+                if dist > maxDist then
+                    maxDist = dist
+                    furthest = p.Character
+                end
+            end
+        end
+    end
+
+    return closest, minDist, furthest, maxDist
+end
+
+-- Função para pegar a ferramenta específica pelo número do slot (1, 2 ou 3)
+local function equipGear(slotNumber)
+    local char = player.Character
+    if not char then return nil end
+    local hum = char:FindFirstChild("Humanoid")
+    
+    local backpackItems = player.Backpack:GetChildren()
+    local equippedTool = char:FindFirstChildOfClass("Tool")
+    
+    -- Se já tiver algo equipado, coloca de volta na mochila para organizar os slots
+    if equippedTool then
+        hum:UnequipTools()
+        task.wait(0.1)
+        backpackItems = player.Backpack:GetChildren()
+    end
+    
+    local toolToEquip = backpackItems[slotNumber]
+    if toolToEquip and hum then
+        hum:EquipTool(toolToEquip)
+        return toolToEquip
+    end
+    return nil
+end
+
+Tab10:CreateToggle({
+   Name = "Ativar Bot de Gear",
+   CurrentValue = false,
+   Flag = "BotGearToggle",
+   Callback = function(Value)
+      botGearAtivo = Value
+      
+      if botGearAtivo then
+         spawn(function()
+            while botGearAtivo do
+               local char = player.Character
+               if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                  local hum = char.Humanoid
+                  local hrp = char.HumanoidRootPart
+                  
+                  local closest, minDist, furthest, maxDist = getPlayersByDistance()
+                  
+                  -- 1. ALGUÉM MUITO PERTO: Solta a Bomba (Gear 1) e foge!
+                  if closest and minDist < 15 then
+                      local bomb = equipGear(1)
+                      if bomb then
+                          bomb:Activate() -- Solta a bomba
+                          task.wait(0.2)
+                          
+                          -- Calcula a direção oposta do inimigo para fugir
+                          local dirFuga = (hrp.Position - closest.HumanoidRootPart.Position).Unit
+                          local posFuga = hrp.Position + (dirFuga * 30)
+                          hum:MoveTo(posFuga)
+                          task.wait(1) -- Corre por 1 segundo para se afastar da explosão
+                      end
+                      
+                  -- 2. INIMIGOS LONGE: Usa a arma de longa distância (Gear 2) ou a branca (Gear 3)
+                  elseif furthest then
+                      -- Movimentação Aleatória para desviar de tiros enquanto ataca
+                      local posAleatoria = hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20))
+                      hum:MoveTo(posAleatoria)
+                      
+                      -- Vira o corpo para atirar no cara mais longe
+                      hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(furthest.HumanoidRootPart.Position.X, hrp.Position.Y, furthest.HumanoidRootPart.Position.Z))
+                      
+                      -- Checagem simples para simular a "Ponte": Verifica se tem chão no meio do caminho usando Raycast
+                      local rayOrigin = hrp.Position
+                      local rayDirection = (furthest.HumanoidRootPart.Position - hrp.Position).Unit * maxDist
+                      local raycastParams = RaycastParams.new()
+                      raycastParams.FilterDescendantsInstances = {char}
+                      raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                      
+                      local rayResult = workspace:Raycast(rayOrigin - Vector3.new(0, 5, 0), rayDirection, raycastParams)
+                      
+                      -- Se o Raycast bater em algo (ponte construída) e não for um buraco, tenta usar a Gear 3
+                      if rayResult and rayResult.Instance then
+                          local whiteGear = equipGear(3)
+                          if whiteGear then
+                              whiteGear:Activate()
+                          end
+                      else
+                          -- Caso contrário (sem ponte/espaço aberto), usa a arma padrão de longe (Gear 2)
+                          local gunGear = equipGear(2)
+                          if gunGear then
+                              gunGear:Activate()
+                          end
+                      end
+                  end
+               end
+               task.wait(0.3) -- Loop de decisão do Bot
             end
          end)
       end
