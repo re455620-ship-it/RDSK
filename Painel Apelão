@@ -1348,4 +1348,108 @@ Rayfield:Notify({
    Content = "Abas 7, 8 e 9 carregadas com sucesso!",
    Duration = 5,
    Image = 4483362458,
+})-- ==============================================
+-- ABA 8: BOTS
+-- ==============================================
+local Tab8 = Window:CreateTab("Bots", 4483362458)
+
+-- Aviso logo de cara
+Tab8:CreateLabel("⚠️ AVISO: O USO DE BOTS PODE DAR BANIMENTO PERMANENTE! ⚠️")
+
+-- Função para encontrar o alvo mais próximo (Jogadores E Dummies)
+local function getNearestTarget()
+    local nearest = nil
+    local minDist = math.huge
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = char.HumanoidRootPart.Position
+
+    -- 1. Checa os Jogadores
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
+            if p.Character.Humanoid.Health > 0 then
+                local dist = (myPos - p.Character.HumanoidRootPart.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearest = p.Character
+                end
+            end
+        end
+    end
+
+    -- 2. Checa os Dummies no Workspace
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") and obj ~= char then
+            -- Verifica se o nome contém "Dummy" (ignora maiúsculas/minúsculas)
+            if string.find(string.lower(obj.Name), "dummy") then
+                if obj.Humanoid.Health > 0 then
+                    local dist = (myPos - obj.HumanoidRootPart.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        nearest = obj
+                    end
+                end
+            end
+        end
+    end
+
+    return nearest
+end
+
+local botBattlegroundsAtivo = false
+local vim = game:GetService("VirtualInputManager")
+
+Tab8:CreateToggle({
+   Name = "1 Bot Luta (Battlegrounds + Dummies)",
+   CurrentValue = false,
+   Flag = "BotBattlegroundsToggle",
+   Callback = function(Value)
+      botBattlegroundsAtivo = Value
+      
+      if botBattlegroundsAtivo then
+         -- Notificação de perigo quando ativa
+         Rayfield:Notify({
+            Title = "⚠️ ALERTA DE RISCO ⚠️",
+            Content = "O uso desta função pode resultar em BANIMENTO PERMANENTE!",
+            Duration = 5,
+         })
+         
+         spawn(function()
+            while botBattlegroundsAtivo do
+               local targetChar = getNearestTarget()
+               local char = player.Character
+               
+               if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("Humanoid") then
+                  local hrp = char:FindFirstChild("HumanoidRootPart")
+                  local tHrp = targetChar:FindFirstChild("HumanoidRootPart")
+                  local hum = char.Humanoid
+                  
+                  if hrp and tHrp then
+                     -- O Bot persegue o alvo (Jogador ou Dummy)
+                     hum:MoveTo(tHrp.Position)
+                     
+                     -- Se chegar a 15 studs de distância, começa a bater
+                     if (hrp.Position - tHrp.Position).Magnitude <= 15 then
+                        
+                        -- Simula o clique do mouse (Soco)
+                        vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                        task.wait(0.05)
+                        vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                        
+                        -- Base de uso de skills (aleatório por enquanto, como é só a base)
+                        local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
+                        local randomKey = skillKeys[math.random(1, #skillKeys)]
+                        
+                        vim:SendKeyEvent(true, randomKey, false, game)
+                        task.wait(0.05)
+                        vim:SendKeyEvent(false, randomKey, false, game)
+                     end
+                  end
+               end
+               task.wait(0.1) -- Loop rápido para caçar o próximo alvo
+            end
+         end)
+      end
+   end,
 })
+
