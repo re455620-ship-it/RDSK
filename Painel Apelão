@@ -1348,23 +1348,21 @@ Rayfield:Notify({
    Content = "Abas 7, 8 e 9 carregadas com sucesso!",
    Duration = 5,
    Image = 4483362458,
-}) -- ==============================================
--- ABA 10: BOTS
+}) 
+         }) -- ==============================================
+-- ABA 8: BOT DE LUTA (Battlegrounds / Jogo KJ)
 -- ==============================================
-local Tab10 = Window:CreateTab("Bots", 4483362458)
+local Tab10 = Window:CreateTab("Bot Luta", 4483362458)
 
--- Aviso logo de cara
 Tab8:CreateLabel("⚠️ AVISO: O USO DE BOTS PODE DAR BANIMENTO PERMANENTE! ⚠️")
 
--- Função para encontrar o alvo mais próximo (Jogadores E Dummies)
-local function getNearestTarget()
+local function getNearestTargetLuta()
     local nearest = nil
     local minDist = math.huge
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local myPos = char.HumanoidRootPart.Position
 
-    -- 1. Checa os Jogadores
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
             if p.Character.Humanoid.Health > 0 then
@@ -1377,7 +1375,6 @@ local function getNearestTarget()
         end
     end
 
-    -- 2. Checa os Dummies no Workspace
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") and obj ~= char then
             if string.find(string.lower(obj.Name), "dummy") then
@@ -1399,23 +1396,22 @@ local botBattlegroundsAtivo = false
 local vim = game:GetService("VirtualInputManager")
 
 Tab8:CreateToggle({
-   Name = "1 Bot Luta (Com Aimbot Corporal)",
+   Name = "1 Bot Luta (Aimbot Corporal + Dummies)",
    CurrentValue = false,
    Flag = "BotBattlegroundsToggle",
    Callback = function(Value)
       botBattlegroundsAtivo = Value
       
       if botBattlegroundsAtivo then
-         -- Notificação de perigo quando ativa
          Rayfield:Notify({
             Title = "⚠️ ALERTA DE RISCO ⚠️",
-            Content = "O uso desta função pode resultar em BANIMENTO PERMANENTE!",
+            Content = "Risco de banimento permanente ativo!",
             Duration = 5,
          })
          
          spawn(function()
             while botBattlegroundsAtivo do
-               local targetChar = getNearestTarget()
+               local targetChar = getNearestTargetLuta()
                local char = player.Character
                
                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
@@ -1425,21 +1421,18 @@ Tab8:CreateToggle({
                   
                   local tPos = tHrp.Position
                   
-                  -- AIMBOT CORPORAL: Vira o corpo de frente para o alvo, mas deixa sua câmera livre!
+                  -- Aimbot Corporal: Vira para o alvo, mas a câmera fica livre
                   hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
                   
-                  -- O Bot persegue o alvo (Jogador ou Dummy)
+                  -- Persegue o alvo
                   hum:MoveTo(tPos)
                   
-                  -- Se chegar a 15 studs de distância, começa a bater
+                  -- Se chegar perto, bate e usa skill
                   if (hrp.Position - tPos).Magnitude <= 15 then
-                     
-                     -- Simula o clique do mouse (Soco)
                      vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
                      task.wait(0.05)
                      vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
                      
-                     -- Base de uso de skills (aleatório)
                      local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
                      local randomKey = skillKeys[math.random(1, #skillKeys)]
                      
@@ -1448,15 +1441,15 @@ Tab8:CreateToggle({
                      vim:SendKeyEvent(false, randomKey, false, game)
                   end
                end
-               -- Delay ligeiramente menor (0.05) para o Aimbot corporal não ficar travando
                task.wait(0.05) 
             end
          end)
       end
    end,
 })
+
 -- ==============================================
--- ABA 11: BOT DE GEAR (Ilha)
+-- ABA 10: BOT DE GEAR (Ilha / 3 Gears)
 -- ==============================================
 local Tab11 = Window:CreateTab("Bot de Gear", 4483362458)
 
@@ -1464,7 +1457,6 @@ Tab10:CreateLabel("⚠️ AVISO: Uso de Bot. Risco de banimento! ⚠️")
 
 local botGearAtivo = false
 
--- Função para encontrar o jogador mais perto e o mais longe
 local function getPlayersByDistance()
     local closest = nil
     local furthest = nil
@@ -1472,7 +1464,7 @@ local function getPlayersByDistance()
     local maxDist = 0
     
     local char = player.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil, nil end
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil, nil, nil, nil end
     local myPos = char.HumanoidRootPart.Position
 
     for _, p in pairs(Players:GetPlayers()) do
@@ -1496,7 +1488,6 @@ local function getPlayersByDistance()
     return closest, minDist, furthest, maxDist
 end
 
--- Função para pegar a ferramenta específica pelo número do slot (1, 2 ou 3)
 local function equipGear(slotNumber)
     local char = player.Character
     if not char then return nil end
@@ -1505,7 +1496,6 @@ local function equipGear(slotNumber)
     local backpackItems = player.Backpack:GetChildren()
     local equippedTool = char:FindFirstChildOfClass("Tool")
     
-    -- Se já tiver algo equipado, coloca de volta na mochila para organizar os slots
     if equippedTool then
         hum:UnequipTools()
         task.wait(0.1)
@@ -1537,30 +1527,26 @@ Tab10:CreateToggle({
                   
                   local closest, minDist, furthest, maxDist = getPlayersByDistance()
                   
-                  -- 1. ALGUÉM MUITO PERTO: Solta a Bomba (Gear 1) e foge!
+                  -- 1. MUITO PERTO: Gear 1 (Bomba) e corre
                   if closest and minDist < 15 then
                       local bomb = equipGear(1)
                       if bomb then
-                          bomb:Activate() -- Solta a bomba
+                          bomb:Activate()
                           task.wait(0.2)
                           
-                          -- Calcula a direção oposta do inimigo para fugir
                           local dirFuga = (hrp.Position - closest.HumanoidRootPart.Position).Unit
                           local posFuga = hrp.Position + (dirFuga * 30)
                           hum:MoveTo(posFuga)
-                          task.wait(1) -- Corre por 1 segundo para se afastar da explosão
+                          task.wait(1)
                       end
                       
-                  -- 2. INIMIGOS LONGE: Usa a arma de longa distância (Gear 2) ou a branca (Gear 3)
+                  -- 2. LONGE: Movimentação aleatória + Gear 2 ou Gear 3
                   elseif furthest then
-                      -- Movimentação Aleatória para desviar de tiros enquanto ataca
                       local posAleatoria = hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20))
                       hum:MoveTo(posAleatoria)
                       
-                      -- Vira o corpo para atirar no cara mais longe
                       hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(furthest.HumanoidRootPart.Position.X, hrp.Position.Y, furthest.HumanoidRootPart.Position.Z))
                       
-                      -- Checagem simples para simular a "Ponte": Verifica se tem chão no meio do caminho usando Raycast
                       local rayOrigin = hrp.Position
                       local rayDirection = (furthest.HumanoidRootPart.Position - hrp.Position).Unit * maxDist
                       local raycastParams = RaycastParams.new()
@@ -1569,22 +1555,16 @@ Tab10:CreateToggle({
                       
                       local rayResult = workspace:Raycast(rayOrigin - Vector3.new(0, 5, 0), rayDirection, raycastParams)
                       
-                      -- Se o Raycast bater em algo (ponte construída) e não for um buraco, tenta usar a Gear 3
                       if rayResult and rayResult.Instance then
                           local whiteGear = equipGear(3)
-                          if whiteGear then
-                              whiteGear:Activate()
-                          end
+                          if whiteGear then whiteGear:Activate() end
                       else
-                          -- Caso contrário (sem ponte/espaço aberto), usa a arma padrão de longe (Gear 2)
                           local gunGear = equipGear(2)
-                          if gunGear then
-                              gunGear:Activate()
-                          end
+                          if gunGear then gunGear:Activate() end
                       end
                   end
                end
-               task.wait(0.3) -- Loop de decisão do Bot
+               task.wait(0.3)
             end
          end)
       end
