@@ -1348,7 +1348,7 @@ Rayfield:Notify({
    Content = "Abas 7, 8 e 9 carregadas com sucesso!",
    Duration = 5,
    Image = 4483362458,
-})-- ==============================================
+}) -- ==============================================
 -- ABA 8: BOTS
 -- ==============================================
 local Tab8 = Window:CreateTab("Bots", 4483362458)
@@ -1380,7 +1380,6 @@ local function getNearestTarget()
     -- 2. Checa os Dummies no Workspace
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") and obj ~= char then
-            -- Verifica se o nome contém "Dummy" (ignora maiúsculas/minúsculas)
             if string.find(string.lower(obj.Name), "dummy") then
                 if obj.Humanoid.Health > 0 then
                     local dist = (myPos - obj.HumanoidRootPart.Position).Magnitude
@@ -1400,7 +1399,7 @@ local botBattlegroundsAtivo = false
 local vim = game:GetService("VirtualInputManager")
 
 Tab8:CreateToggle({
-   Name = "1 Bot Luta (Battlegrounds + Dummies)",
+   Name = "1 Bot Luta (Com Aimbot Corporal)",
    CurrentValue = false,
    Flag = "BotBattlegroundsToggle",
    Callback = function(Value)
@@ -1419,37 +1418,40 @@ Tab8:CreateToggle({
                local targetChar = getNearestTarget()
                local char = player.Character
                
-               if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("Humanoid") then
-                  local hrp = char:FindFirstChild("HumanoidRootPart")
-                  local tHrp = targetChar:FindFirstChild("HumanoidRootPart")
+               if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                  local hrp = char.HumanoidRootPart
+                  local tHrp = targetChar.HumanoidRootPart
                   local hum = char.Humanoid
                   
-                  if hrp and tHrp then
-                     -- O Bot persegue o alvo (Jogador ou Dummy)
-                     hum:MoveTo(tHrp.Position)
+                  local tPos = tHrp.Position
+                  
+                  -- AIMBOT CORPORAL: Vira o corpo de frente para o alvo, mas deixa sua câmera livre!
+                  hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
+                  
+                  -- O Bot persegue o alvo (Jogador ou Dummy)
+                  hum:MoveTo(tPos)
+                  
+                  -- Se chegar a 15 studs de distância, começa a bater
+                  if (hrp.Position - tPos).Magnitude <= 15 then
                      
-                     -- Se chegar a 15 studs de distância, começa a bater
-                     if (hrp.Position - tHrp.Position).Magnitude <= 15 then
-                        
-                        -- Simula o clique do mouse (Soco)
-                        vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                        task.wait(0.05)
-                        vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                        
-                        -- Base de uso de skills (aleatório por enquanto, como é só a base)
-                        local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
-                        local randomKey = skillKeys[math.random(1, #skillKeys)]
-                        
-                        vim:SendKeyEvent(true, randomKey, false, game)
-                        task.wait(0.05)
-                        vim:SendKeyEvent(false, randomKey, false, game)
-                     end
+                     -- Simula o clique do mouse (Soco)
+                     vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                     task.wait(0.05)
+                     vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                     
+                     -- Base de uso de skills (aleatório)
+                     local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
+                     local randomKey = skillKeys[math.random(1, #skillKeys)]
+                     
+                     vim:SendKeyEvent(true, randomKey, false, game)
+                     task.wait(0.05)
+                     vim:SendKeyEvent(false, randomKey, false, game)
                   end
                end
-               task.wait(0.1) -- Loop rápido para caçar o próximo alvo
+               -- Delay ligeiramente menor (0.05) para o Aimbot corporal não ficar travando
+               task.wait(0.05) 
             end
          end)
       end
    end,
 })
-
