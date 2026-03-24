@@ -1,1 +1,1573 @@
+-- ==============================================
+-- TELA INICIAL: CRIADO POR RDSK
+-- ==============================================
+local CoreGui = game:GetService("CoreGui")
+local introGui = Instance.new("ScreenGui")
+introGui.Name = "IntroRDSK"
+introGui.Parent = CoreGui
+
+local introText = Instance.new("TextLabel")
+introText.Size = UDim2.new(1, 0, 1, 0)
+introText.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+introText.BackgroundTransparency = 0.5
+introText.TextColor3 = Color3.fromRGB(255, 255, 255)
+introText.TextSize = 60
+introText.Font = Enum.Font.GothamBlack
+introText.Text = "CRIADO POR RDSK"
+introText.Parent = introGui
+
+-- Oculta e destrói a tela inicial após 3 segundos
+task.delay(3, function()
+    for i = 0.5, 1, 0.05 do
+        introText.TextTransparency = i
+        introText.BackgroundTransparency = i
+        task.wait(0.05)
+    end
+    introGui:Destroy()
+end)
+
+-- ==============================================
+-- CARREGAMENTO DA BIBLIOTECA RAYFIELD
+-- ==============================================
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "Hub",
+   LoadingTitle = "Carregando...",
+   LoadingSubtitle = "Aguarde",
+   ConfigurationSaving = {
+      Enabled = false,
+   },
+   KeySystem = false,
+})
+
+local player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
+
+-- Função utilitária para pegar o jogador pela metade do nome
+local function getTargetPlayer(partialName)
+    if not partialName or partialName == "" then return nil end
+    local lowerName = string.lower(partialName)
+    
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            if string.sub(string.lower(p.Name), 1, #lowerName) == lowerName or string.sub(string.lower(p.DisplayName), 1, #lowerName) == lowerName then
+                return p
+            end
+        end
+    end
+    return nil
+end
+
+-- ==============================================
+-- ABA 1: SCRIPTS LEGAIS
+-- ==============================================
+local Tab1 = Window:CreateTab("scripts legais", 4483362458) 
+
+-- FLY
+local flying = false
+local flySpeed = 50
+local flyKeys = {W = 0, S = 0, A = 0, D = 0}
+
+Tab1:CreateToggle({
+   Name = "Fly (Script Pronto)",
+   CurrentValue = false,
+   Flag = "FlyToggle", 
+   Callback = function(Value)
+      flying = Value
+      local char = player.Character
+      if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+      local hrp = char.HumanoidRootPart
+      local hum = char:FindFirstChild("Humanoid")
+      
+      if flying then
+         local bg = Instance.new("BodyGyro", hrp)
+         bg.P = 9e4
+         bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+         bg.cframe = hrp.CFrame
+         local bv = Instance.new("BodyVelocity", hrp)
+         bv.velocity = Vector3.new(0,0,0)
+         bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+         
+         spawn(function()
+            while flying and char and char:FindFirstChild("HumanoidRootPart") do
+               RunService.RenderStepped:Wait()
+               if hum then hum.PlatformStand = true end
+               local camCFrame = workspace.CurrentCamera.CFrame
+               if flyKeys.W + flyKeys.S ~= 0 or flyKeys.A + flyKeys.D ~= 0 then
+                  bv.velocity = ((camCFrame.LookVector * (flyKeys.W + flyKeys.S)) + (camCFrame.RightVector * (flyKeys.A + flyKeys.D))) * flySpeed
+               else
+                  bv.velocity = Vector3.new(0,0,0)
+               end
+               bg.cframe = camCFrame
+            end
+            if bg then bg:Destroy() end
+            if bv then bv:Destroy() end
+            if hum then hum.PlatformStand = false end
+         end)
+      end
+   end,
+})
+
+UserInputService.InputBegan:Connect(function(input, isProcessed)
+    if isProcessed then return end
+    if input.KeyCode == Enum.KeyCode.W then flyKeys.W = 1
+    elseif input.KeyCode == Enum.KeyCode.S then flyKeys.S = -1
+    elseif input.KeyCode == Enum.KeyCode.A then flyKeys.A = -1
+    elseif input.KeyCode == Enum.KeyCode.D then flyKeys.D = 1 end
+end)
+UserInputService.InputEnded:Connect(function(input, isProcessed)
+    if isProcessed then return end
+    if input.KeyCode == Enum.KeyCode.W then flyKeys.W = 0
+    elseif input.KeyCode == Enum.KeyCode.S then flyKeys.S = 0
+    elseif input.KeyCode == Enum.KeyCode.A then flyKeys.A = 0
+    elseif input.KeyCode == Enum.KeyCode.D then flyKeys.D = 0 end
+end)
+
+-- SPEED
+Tab1:CreateInput({
+   Name = "Speed (16-900)",
+   PlaceholderText = "Digite a velocidade...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local speedValue = tonumber(Text)
+      if speedValue and speedValue >= 16 and speedValue <= 900 then
+         if player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.WalkSpeed = speedValue
+         end
+      end
+   end,
+})
+
+-- PULO
+Tab1:CreateInput({
+   Name = "Pulo (16-200)",
+   PlaceholderText = "Digite o pulo...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local jumpValue = tonumber(Text)
+      if jumpValue and jumpValue >= 16 and jumpValue <= 200 then
+         if player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.UseJumpPower = true
+            player.Character.Humanoid.JumpPower = jumpValue
+         end
+      end
+   end,
+})
+
+-- INVISÍVEL
+local invPart = nil
+local savedCFrame = nil
+local invisibleActive = false
+
+Tab1:CreateToggle({
+   Name = "Invisível",
+   CurrentValue = false,
+   Flag = "InvisToggle",
+   Callback = function(Value)
+      invisibleActive = Value
+      local char = player.Character
+      local cam = workspace.CurrentCamera
+      
+      if invisibleActive then
+         if char and char:FindFirstChild("HumanoidRootPart") then
+            savedCFrame = char.HumanoidRootPart.CFrame
+            local oldCamCFrame = cam.CFrame
+            
+            invPart = Instance.new("Part", workspace)
+            invPart.Size = Vector3.new(5000, 5, 5000)
+            invPart.Position = Vector3.new(0, 100000, 0)
+            invPart.Anchored = true
+            invPart.Transparency = 1 
+            
+            char.HumanoidRootPart.CFrame = CFrame.new(0, 100005, 0)
+            
+            cam.CameraType = Enum.CameraType.Scriptable
+            cam.CFrame = oldCamCFrame
+         end
+      else
+         if char and char:FindFirstChild("HumanoidRootPart") and savedCFrame then
+            char.HumanoidRootPart.CFrame = savedCFrame
+         end
+         if invPart then invPart:Destroy() end
+         
+         cam.CameraType = Enum.CameraType.Custom
+         cam.CameraSubject = char:WaitForChild("Humanoid")
+      end
+   end,
+})
+
+-- EVADE
+local evadeSpeed = 16
+local evadeConnection = nil
+
+Tab1:CreateInput({
+   Name = "Evade Speed Force (16-100)",
+   PlaceholderText = "Digite a velocidade...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local speedVal = tonumber(Text)
+      if speedVal and speedVal >= 16 and speedVal <= 100 then
+         evadeSpeed = speedVal
+      end
+   end,
+})
+
+Tab1:CreateToggle({
+   Name = "Ativar Evade Speed",
+   CurrentValue = false,
+   Flag = "EvadeToggle",
+   Callback = function(Value)
+      if Value then
+         evadeConnection = RunService.RenderStepped:Connect(function(deltaTime)
+            local char = player.Character
+            if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                local hum = char.Humanoid
+                if hum.MoveDirection.Magnitude > 0 then
+                    local extraSpeed = (evadeSpeed - 16) * 1.5 
+                    if extraSpeed > 0 then
+                        char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + (hum.MoveDirection * (extraSpeed * deltaTime))
+                    end
+                end
+            end
+         end)
+      else
+         if evadeConnection then
+            evadeConnection:Disconnect()
+            evadeConnection = nil
+         end
+      end
+   end,
+})
+
+-- ==============================================
+-- ABA 2: TROLL (GERAL)
+-- ==============================================
+local Tab2 = Window:CreateTab("Troll", 4483362458)
+
+local targetTroll = ""
+
+Tab2:CreateInput({
+   Name = "Opção de quem vai ser alvo",
+   PlaceholderText = "Nome do jogador...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      targetTroll = Text
+   end,
+})
+
+local trollFlingActive = false
+local trollFlingConn = nil
+local trollFlingSpin = nil
+
+Tab2:CreateToggle({
+   Name = "1 Fling (Corporal)",
+   CurrentValue = false,
+   Flag = "FlingCorp",
+   Callback = function(Value)
+      trollFlingActive = Value
+      local char = player.Character
+      if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+      local hrp = char.HumanoidRootPart
+      local hum = char:FindFirstChild("Humanoid")
+
+      if trollFlingActive then
+         local target = getTargetPlayer(targetTroll)
+         if target then
+             hum.PlatformStand = true
+             trollFlingSpin = Instance.new("BodyAngularVelocity", hrp)
+             trollFlingSpin.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+             trollFlingSpin.AngularVelocity = Vector3.new(0, 1000, 0) -- Spin 1000
+
+             trollFlingConn = RunService.Heartbeat:Connect(function()
+                 if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                     hrp.CFrame = target.Character.HumanoidRootPart.CFrame
+                 else
+                     if trollFlingConn then trollFlingConn:Disconnect() end
+                 end
+             end)
+         end
+      else
+         if trollFlingConn then trollFlingConn:Disconnect() end
+         if trollFlingSpin then trollFlingSpin:Destroy() end
+         if hum then hum.PlatformStand = false end
+         hrp.Velocity = Vector3.new(0,0,0)
+         hrp.RotVelocity = Vector3.new(0,0,0)
+      end
+   end,
+})
+
+Tab2:CreateToggle({
+   Name = "2 View (Espectar)",
+   CurrentValue = false,
+   Flag = "ViewTroll",
+   Callback = function(Value)
+      if Value then
+         local target = getTargetPlayer(targetTroll)
+         if target and target.Character and target.Character:FindFirstChild("Humanoid") then
+             workspace.CurrentCamera.CameraSubject = target.Character.Humanoid
+         end
+      else
+         if player.Character and player.Character:FindFirstChild("Humanoid") then
+             workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
+         end
+      end
+   end,
+})
+
+Tab2:CreateButton({
+   Name = "3 Tp Jogador",
+   Callback = function()
+      local target = getTargetPlayer(targetTroll)
+      local char = player.Character
+      if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("HumanoidRootPart") then
+          char.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+      end
+   end,
+})
+
+-- ==============================================
+-- ABA 3: BROOKHAVEN (TROLL)
+-- ==============================================
+local Tab3 = Window:CreateTab("brookhaven (Troll)", 4483362458)
+
+local targetBh = ""
+
+Tab3:CreateInput({
+   Name = "Alvo Brookhaven",
+   PlaceholderText = "Nome do jogador...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      targetBh = Text
+   end,
+})
+
+-- 1 Fling Sofá (Lógica adaptada do seu script)
+Tab3:CreateButton({
+   Name = "1 Fling Sofá (Void + Spin 1000)",
+   Callback = function()
+      local targetPlayer = getTargetPlayer(targetBh)
+      if not targetPlayer then
+          Rayfield:Notify({Title = "Erro", Content = "Jogador não encontrado!", Duration = 3})
+          return
+      end
+
+      local character = player.Character or player.CharacterAdded:Wait()
+      local humanoid = character:WaitForChild("Humanoid")
+      local rootPart = character:WaitForChild("HumanoidRootPart")
+
+      local originalPosition = rootPart.CFrame
+      local sofaLocation = CFrame.new(-82.620, 19.371, -130.035)
+      rootPart.CFrame = sofaLocation
+      
+      local timeWaited = 0
+      while not humanoid.Sit and timeWaited < 3 do
+          rootPart.CFrame = sofaLocation
+          task.wait(0.1)
+          timeWaited = timeWaited + 0.1
+      end
+
+      if humanoid.Sit then humanoid.Jump = true end
+      task.wait(0.5)
+
+      local grabbedTool = player.Backpack:FindFirstChildOfClass("Tool")
+      if grabbedTool then humanoid:EquipTool(grabbedTool) end
+      task.wait(0.5)
+
+      local targetChar = targetPlayer.Character
+      if not targetChar or not targetChar:FindFirstChild("HumanoidRootPart") then return end
+
+      local spinVelocity = Instance.new("BodyAngularVelocity")
+      spinVelocity.Name = "SpinVelocity1000"
+      spinVelocity.Parent = rootPart
+      spinVelocity.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+      spinVelocity.AngularVelocity = Vector3.new(0, 1000, 0)
+
+      local lastPlatformStand = humanoid.PlatformStand
+      humanoid.PlatformStand = true
+
+      local flingTime = 10
+      local startTime = tick()
+      local conn
+
+      conn = RunService.Heartbeat:Connect(function()
+          if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
+              rootPart.CFrame = targetChar.HumanoidRootPart.CFrame
+          else
+              conn:Disconnect()
+          end
+      end)
+
+      repeat task.wait() until tick() - startTime >= flingTime
+
+      conn:Disconnect()
+      if spinVelocity then spinVelocity:Destroy() end
+      humanoid.PlatformStand = lastPlatformStand
+      
+      rootPart.Velocity = Vector3.new(0,0,0)
+      rootPart.RotVelocity = Vector3.new(0,0,0)
+
+      local aboveVoidLocation = CFrame.new(0, -400, 0)
+      rootPart.CFrame = aboveVoidLocation
+      
+      task.wait(0.5)
+      humanoid:UnequipTools()
+      task.wait(1.5)
+
+      rootPart.CFrame = originalPosition
+   end,
+})
+
+Tab3:CreateToggle({
+   Name = "2 View Player",
+   CurrentValue = false,
+   Flag = "ViewBh",
+   Callback = function(Value)
+      if Value then
+         local target = getTargetPlayer(targetBh)
+         if target and target.Character and target.Character:FindFirstChild("Humanoid") then
+             workspace.CurrentCamera.CameraSubject = target.Character.Humanoid
+         end
+      else
+         if player.Character and player.Character:FindFirstChild("Humanoid") then
+             workspace.CurrentCamera.CameraSubject = player.Character.Humanoid
+         end
+      end
+   end,
+})
+
+Tab3:CreateButton({
+   Name = "3 Tp Jogador",
+   Callback = function()
+      local target = getTargetPlayer(targetBh)
+      local char = player.Character
+      if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("HumanoidRootPart") then
+          char.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+      end
+   end,
+})
+
+-- 4 Fling Ball (Pega o 2º item, clica, solta e loop infinito no alvo)
+local ballConn = nil
+
+Tab3:CreateToggle({
+   Name = "4 Fling Ball (Soccer Ball Loop)",
+   CurrentValue = false,
+   Flag = "FlingBallToggle",
+   Callback = function(Value)
+      if Value then
+         local target = getTargetPlayer(targetBh)
+         if not target then return end
+         
+         local backpackItems = player.Backpack:GetChildren()
+         local tool = backpackItems[2] -- Pega o segundo item
+         
+         if not tool and player.Character:FindFirstChildOfClass("Tool") then
+             tool = player.Character:FindFirstChildOfClass("Tool")
+         end
+         
+         if tool then
+             player.Character.Humanoid:EquipTool(tool)
+             task.wait(0.2)
+             tool:Activate() -- Clica automaticamente
+             task.wait(0.1)
+             tool.Parent = workspace -- Solta a bola
+             
+             local handle = tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("Part")
+             if handle then
+                 ballConn = RunService.Heartbeat:Connect(function()
+                     if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                         handle.CFrame = target.Character.HumanoidRootPart.CFrame
+                         handle.Velocity = Vector3.new(0, 500, 0)
+                     else
+                         if ballConn then ballConn:Disconnect() end
+                     end
+                 end)
+             end
+         end
+      else
+         if ballConn then ballConn:Disconnect() end
+      end
+   end,
+})
+
+-- 5 Veículos Velocidade (0-200)
+local carSpeed = 0
+local carSpeedConn = nil
+
+Tab3:CreateInput({
+   Name = "5 Veículos Velocidade (0-200)",
+   PlaceholderText = "Velocidade do veículo...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local s = tonumber(Text)
+      if s and s >= 0 and s <= 200 then
+          carSpeed = s
+      end
+   end,
+})
+
+Tab3:CreateToggle({
+   Name = "Ativar Velocidade do Veículo",
+   CurrentValue = false,
+   Flag = "VeiculoSpeed",
+   Callback = function(Value)
+      if Value then
+         carSpeedConn = RunService.RenderStepped:Connect(function()
+            local char = player.Character
+            if char and char:FindFirstChild("Humanoid") and char.Humanoid.SeatPart and char.Humanoid.SeatPart:IsA("VehicleSeat") then
+                local seat = char.Humanoid.SeatPart
+                -- Empurra o carro pra frente com base na aceleração (W/S)
+                if seat.Throttle == 1 then
+                    seat.AssemblyLinearVelocity = seat.CFrame.LookVector * carSpeed
+                elseif seat.Throttle == -1 then
+                    seat.AssemblyLinearVelocity = seat.CFrame.LookVector * -carSpeed
+                end
+            end
+         end)
+      else
+         if carSpeedConn then
+            carSpeedConn:Disconnect()
+            carSpeedConn = nil
+         end
+      end
+   end,
+})
+
+Rayfield:Notify({
+   Title = "Sucesso",
+   Content = "Hub carregado por completo.",
+   Duration = 5,
+   Image = 4483362458,
+})
+-- ==============================================
+-- ABA 4: FUJA DA PRISÃO DO BARRY
+-- ==============================================
+local Tab4 = Window:CreateTab("Fuja da prisão do Barry", 4483362458)
+
+-- 1 Pegar Carro (Direto, sem Boss)
+Tab4:CreateButton({
+   Name = "1 Pegar Carro",
+   Callback = function()
+      local char = player.Character
+      if char and char:FindFirstChild("HumanoidRootPart") then
+         local hrp = char.HumanoidRootPart
+         local posInicial = hrp.CFrame -- Salva a sua posição atual de onde ativou
+         
+         -- 1. Tenta teleportar para a EpicDoor primeiro
+         local epicDoorPart = workspace:FindFirstChild("LocalObjects") 
+            and workspace.LocalObjects:FindFirstChild("EpicDoor") 
+            and workspace.LocalObjects.EpicDoor:FindFirstChild("d2") 
+            and workspace.LocalObjects.EpicDoor.d2:FindFirstChild("Part")
+            
+         if epicDoorPart then
+            hrp.CFrame = epicDoorPart.CFrame
+            task.wait(0.5) -- Pequeno delay pro jogo registrar a porta
+         end
+         
+         -- 2. Teleporta direto para o carro
+         hrp.CFrame = CFrame.new(-1917.767, 957.331, -683.483)
+         
+         -- 3. Fica lá por 4 segundos
+         task.wait(4)
+         
+         -- 4. Volta exatamente para o lugar onde você estava
+         hrp.CFrame = posInicial
+      end
+   end,
+})
+
+-- 2 Final
+Tab4:CreateButton({
+   Name = "2 Final",
+   Callback = function()
+      local char = player.Character
+      if char and char:FindFirstChild("HumanoidRootPart") then
+         char.HumanoidRootPart.CFrame = CFrame.new(-3540.345, 1075.356, -450.452)
+      end
+   end,
+})
+
+-- 3 Prender todo mundo
+local prenderAtivo = false
+Tab4:CreateToggle({
+   Name = "3 Prender todo mundo (Loop 7s)",
+   CurrentValue = false,
+   Flag = "PrenderToggle",
+   Callback = function(Value)
+      prenderAtivo = Value
+      if prenderAtivo then
+         Rayfield:Notify({
+            Title = "Aviso do Sistema",
+            Content = "Segure algema!",
+            Duration = 5,
+         })
+         
+         spawn(function()
+            while prenderAtivo do
+               for _, target in pairs(Players:GetPlayers()) do
+                  if not prenderAtivo then break end
+                  
+                  if target ~= player and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                     local char = player.Character
+                     if char and char:FindFirstChild("HumanoidRootPart") then
+                        char.HumanoidRootPart.CFrame = target.Character.HumanoidRootPart.CFrame
+                        task.wait(7)
+                     end
+                  end
+               end
+               task.wait(0.5)
+            end
+         end)
+      end
+   end,
+})
+
+-- 4 Kill Aura
+local killAuraRange = 10
+local killAuraAtiva = false
+
+Tab4:CreateInput({
+   Name = "4 Kill Aura Distância (10-200)",
+   PlaceholderText = "Digite a distância...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local dist = tonumber(Text)
+      if dist and dist >= 10 and dist <= 200 then
+         killAuraRange = dist
+      end
+   end,
+})
+
+Tab4:CreateToggle({
+   Name = "Ativar Kill Aura",
+   CurrentValue = false,
+   Flag = "KillAuraToggle",
+   Callback = function(Value)
+      killAuraAtiva = Value
+      if killAuraAtiva then
+         spawn(function()
+            while killAuraAtiva do
+               local char = player.Character
+               if char and char:FindFirstChild("HumanoidRootPart") then
+                  local hrp = char.HumanoidRootPart
+                  local tool = char:FindFirstChildOfClass("Tool")
+                  
+                  if tool then
+                     for _, target in pairs(Players:GetPlayers()) do
+                        if target ~= player and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and target.Character:FindFirstChild("Humanoid") then
+                           local targetHrp = target.Character.HumanoidRootPart
+                           local targetHum = target.Character.Humanoid
+                           
+                           if targetHum.Health > 0 and (hrp.Position - targetHrp.Position).Magnitude <= killAuraRange then
+                              tool:Activate()
+                              
+                              local handle = tool:FindFirstChild("Handle") or tool:FindFirstChildWhichIsA("Part")
+                              if handle then
+                                 firetouchinterest(handle, targetHrp, 0)
+                                 task.wait(0.01)
+                                 firetouchinterest(handle, targetHrp, 1)
+                              end
+                           end
+                        end
+                     end
+                  end
+               end
+               task.wait(0.1)
+            end
+         end)
+      end
+   end,
+})
+
+-- 5 Pegar Coins/Moedas/Money/CC
+Tab4:CreateButton({
+   Name = "5 Pegar Dinheiro (Moedas/CC)",
+   Callback = function()
+      local char = player.Character
+      if char and char:FindFirstChild("HumanoidRootPart") then
+         local hrp = char.HumanoidRootPart
+         local posInicial = hrp.CFrame 
+         
+         for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("BasePart") or obj:IsA("MeshPart") then
+               local nomeLower = string.lower(obj.Name)
+               -- Verifica se o nome tem coin, moeda, money ou se é/tem cc
+               if string.find(nomeLower, "coin") or string.find(nomeLower, "moeda") or string.find(nomeLower, "money") or string.find(nomeLower, "cc") then
+                  hrp.CFrame = obj.CFrame
+                  task.wait(0.15) 
+               end
+            end
+         end
+         
+         hrp.CFrame = posInicial
+         
+         Rayfield:Notify({
+            Title = "Concluído",
+            Content = "Todo o dinheiro e CCs encontrados foram coletados!",
+            Duration = 3,
+         })
+      end
+   end,
+})
+-- ==============================================
+-- ABA 5: OP BATTLEGROUNDS (Jogo KJ - Makaradadd)
+-- ==============================================
+local Tab5 = Window:CreateTab("OP BATTLEGROUNDS", 4483362458)
+
+local targetOp = ""
+Tab5:CreateInput({
+   Name = "Alvo (Para Aimbot, TP Kill, Bot)",
+   PlaceholderText = "Nome do jogador...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      targetOp = Text
+   end,
+})
+
+-- 1 AIMBOT (Corporal - Foca no alvo sem travar a câmera)
+local aimbotCorpAtivo = false
+local aimbotConn = nil
+
+Tab5:CreateToggle({
+   Name = "1 Aimbot Corporal",
+   CurrentValue = false,
+   Flag = "AimbotCorp",
+   Callback = function(Value)
+      aimbotCorpAtivo = Value
+      if aimbotCorpAtivo then
+         aimbotConn = RunService.RenderStepped:Connect(function()
+            local target = getTargetPlayer(targetOp)
+            local char = player.Character
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("HumanoidRootPart") then
+               local hrp = char.HumanoidRootPart
+               local tPos = target.Character.HumanoidRootPart.Position
+               -- Vira apenas o corpo para o alvo, mantendo a sua câmera totalmente livre
+               hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
+            end
+         end)
+      else
+         if aimbotConn then aimbotConn:Disconnect() end
+      end
+   end,
+})
+
+-- 2 TP KILL (Teleporta um pouco pra frente + Spin)
+local tpKillAtivo = false
+local tpKillConn = nil
+local tpKillSpin = nil
+
+Tab5:CreateToggle({
+   Name = "2 TP Kill (Frente + Spin)",
+   CurrentValue = false,
+   Flag = "TpKillSpin",
+   Callback = function(Value)
+      tpKillAtivo = Value
+      local char = player.Character
+      if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+      local hrp = char.HumanoidRootPart
+      local hum = char:FindFirstChild("Humanoid")
+
+      if tpKillAtivo then
+         local target = getTargetPlayer(targetOp)
+         if target then
+             hum.PlatformStand = true
+             tpKillSpin = Instance.new("BodyAngularVelocity", hrp)
+             tpKillSpin.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+             tpKillSpin.AngularVelocity = Vector3.new(0, 1000, 0) -- Spin rápido
+
+             tpKillConn = RunService.Heartbeat:Connect(function()
+                 if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                     -- Fica exatamente 2.5 studs na frente da pessoa enquanto gira nela
+                     hrp.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0, 0, -2.5)
+                 else
+                     if tpKillConn then tpKillConn:Disconnect() end
+                 end
+             end)
+         end
+      else
+         if tpKillConn then tpKillConn:Disconnect() end
+         if tpKillSpin then tpKillSpin:Destroy() end
+         if hum then hum.PlatformStand = false end
+         hrp.Velocity = Vector3.new(0,0,0)
+         hrp.RotVelocity = Vector3.new(0,0,0)
+      end
+   end,
+})
+
+-- 3 SPEED (Puxa pra frente por CFrame)
+local opSpeed = 0
+local opSpeedConn = nil
+
+Tab5:CreateInput({
+   Name = "3 Speed Valor (0-200)",
+   PlaceholderText = "Digite a velocidade...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local s = tonumber(Text)
+      if s and s >= 0 and s <= 200 then
+         opSpeed = s
+      end
+   end,
+})
+
+Tab5:CreateToggle({
+   Name = "Ativar Speed (CFrame Push)",
+   CurrentValue = false,
+   Flag = "OpSpeedToggle",
+   Callback = function(Value)
+      if Value then
+         opSpeedConn = RunService.RenderStepped:Connect(function(deltaTime)
+            local char = player.Character
+            if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                local hum = char.Humanoid
+                -- Só puxa pra frente se você estiver pressionando para andar
+                if hum.MoveDirection.Magnitude > 0 then
+                    char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + (hum.MoveDirection * (opSpeed * deltaTime))
+                end
+            end
+         end)
+      else
+         if opSpeedConn then 
+            opSpeedConn:Disconnect() 
+            opSpeedConn = nil 
+         end
+      end
+   end,
+})
+
+-- 4 HITBOX AUMENTAR (Zero bugs no chão)
+local hitboxSize = 2
+local hitboxAtiva = false
+
+Tab5:CreateInput({
+   Name = "4 Hitbox Cabeça (Tamanho 0-inf)",
+   PlaceholderText = "Tamanho desejado...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local s = tonumber(Text)
+      if s and s >= 0 then
+         hitboxSize = s
+      end
+   end,
+})
+
+Tab5:CreateToggle({
+   Name = "Ativar Hitbox Gigante",
+   CurrentValue = false,
+   Flag = "HitboxToggle",
+   Callback = function(Value)
+      hitboxAtiva = Value
+      spawn(function()
+         while hitboxAtiva do
+            for _, tPlayer in pairs(Players:GetPlayers()) do
+               if tPlayer ~= player and tPlayer.Character and tPlayer.Character:FindFirstChild("Head") then
+                  local head = tPlayer.Character.Head
+                  head.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                  -- Impede que a cabeça pesada bugue o cara no chão
+                  head.CanCollide = false
+                  head.Massless = true
+                  head.Transparency = 0.5 -- Meio transparente pra não cegar sua tela
+               end
+            end
+            task.wait(1)
+         end
+         
+         -- Volta ao normal quando você desativa a opção
+         if not hitboxAtiva then
+            for _, tPlayer in pairs(Players:GetPlayers()) do
+               if tPlayer ~= player and tPlayer.Character and tPlayer.Character:FindFirstChild("Head") then
+                  local head = tPlayer.Character.Head
+                  head.Size = Vector3.new(2, 1, 1)
+                  head.CanCollide = true
+                  head.Massless = false
+                  head.Transparency = 0
+               end
+            end
+         end
+      end)
+   end,
+})
+
+-- 5 AUTOMÁTICO (Bot KJ - Movimento e Combos)
+local botKjAtivo = false
+local vim = game:GetService("VirtualInputManager")
+
+Tab5:CreateToggle({
+   Name = "5 Automático (Bot KJ)",
+   CurrentValue = false,
+   Flag = "BotKjToggle",
+   Callback = function(Value)
+      botKjAtivo = Value
+      if botKjAtivo then
+         spawn(function()
+            while botKjAtivo do
+               local target = getTargetPlayer(targetOp)
+               local char = player.Character
+               if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("Humanoid") then
+                  local hrp = char:FindFirstChild("HumanoidRootPart")
+                  local tHrp = target.Character.HumanoidRootPart
+                  local hum = char.Humanoid
+                  
+                  -- Bot persegue o alvo sozinho
+                  hum:MoveTo(tHrp.Position)
+                  
+                  -- Se chegar perto do alvo (15 studs de distância), inicia o espancamento
+                  if hrp and (hrp.Position - tHrp.Position).Magnitude <= 15 then
+                     
+                     -- Simula clique esquerdo para soco básico
+                     vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                     task.wait(0.05)
+                     vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                     
+                     -- Usa as habilidades (Ravage, Varredura Rápida, etc) aleatoriamente no meio do combo
+                     local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
+                     local randomKey = skillKeys[math.random(1, #skillKeys)]
+                     
+                     vim:SendKeyEvent(true, randomKey, false, game)
+                     task.wait(0.05)
+                     vim:SendKeyEvent(false, randomKey, false, game)
+                  end
+               end
+               task.wait(0.1)
+            end
+         end)
+      end
+   end,
+})
+-- ==============================================
+-- ABA 6: EVADE
+-- ==============================================
+local Tab6 = Window:CreateTab("Evade", 4483362458)
+
+-- 1 SPEED (Movido e sem o nome antigo)
+local evadeSpeedNew = 16
+local evadeConnectionNew = nil
+
+Tab6:CreateInput({
+   Name = "Speed Force (16-100)",
+   PlaceholderText = "Digite a velocidade...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local speedVal = tonumber(Text)
+      if speedVal and speedVal >= 16 and speedVal <= 100 then
+         evadeSpeedNew = speedVal
+      end
+   end,
+})
+
+Tab6:CreateToggle({
+   Name = "Ativar Speed",
+   CurrentValue = false,
+   Flag = "EvadeSpeedToggleTab6",
+   Callback = function(Value)
+      if Value then
+         evadeConnectionNew = RunService.RenderStepped:Connect(function(deltaTime)
+            local char = player.Character
+            if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                local hum = char.Humanoid
+                if hum.MoveDirection.Magnitude > 0 then
+                    local extraSpeed = (evadeSpeedNew - 16) * 1.5 
+                    if extraSpeed > 0 then
+                        char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + (hum.MoveDirection * (extraSpeed * deltaTime))
+                    end
+                end
+            end
+         end)
+      else
+         if evadeConnectionNew then
+            evadeConnectionNew:Disconnect()
+            evadeConnectionNew = nil
+         end
+      end
+   end,
+})
+
+-- 2 POWER JUMP (0-100)
+Tab6:CreateInput({
+   Name = "Power Jump (0-100)",
+   PlaceholderText = "Digite a força do pulo...",
+   RemoveTextAfterFocusLost = false,
+   Callback = function(Text)
+      local jumpValue = tonumber(Text)
+      if jumpValue and jumpValue >= 0 and jumpValue <= 100 then
+         if player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.UseJumpPower = true
+            player.Character.Humanoid.JumpPower = jumpValue
+         end
+      end
+   end,
+})
+
+-- 3 FLY (Aquele antigo fly pronto)
+local evadeFlying = false
+local evadeFlySpeed = 50
+local evadeFlyKeys = {W = 0, S = 0, A = 0, D = 0}
+
+Tab6:CreateToggle({
+   Name = "Fly (Voo)",
+   CurrentValue = false,
+   Flag = "EvadeFlyToggle", 
+   Callback = function(Value)
+      evadeFlying = Value
+      local char = player.Character
+      if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+      local hrp = char.HumanoidRootPart
+      local hum = char:FindFirstChild("Humanoid")
+      
+      if evadeFlying then
+         local bg = Instance.new("BodyGyro", hrp)
+         bg.P = 9e4
+         bg.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+         bg.cframe = hrp.CFrame
+         local bv = Instance.new("BodyVelocity", hrp)
+         bv.velocity = Vector3.new(0,0,0)
+         bv.maxForce = Vector3.new(9e9, 9e9, 9e9)
+         
+         spawn(function()
+            while evadeFlying and char and char:FindFirstChild("HumanoidRootPart") do
+               RunService.RenderStepped:Wait()
+               if hum then hum.PlatformStand = true end
+               local camCFrame = workspace.CurrentCamera.CFrame
+               if evadeFlyKeys.W + evadeFlyKeys.S ~= 0 or evadeFlyKeys.A + evadeFlyKeys.D ~= 0 then
+                  bv.velocity = ((camCFrame.LookVector * (evadeFlyKeys.W + evadeFlyKeys.S)) + (camCFrame.RightVector * (evadeFlyKeys.A + evadeFlyKeys.D))) * evadeFlySpeed
+               else
+                  bv.velocity = Vector3.new(0,0,0)
+               end
+               bg.cframe = camCFrame
+            end
+            if bg then bg:Destroy() end
+            if bv then bv:Destroy() end
+            if hum then hum.PlatformStand = false end
+         end)
+      end
+   end,
+})
+
+UserInputService.InputBegan:Connect(function(input, isProcessed)
+    if isProcessed then return end
+    if input.KeyCode == Enum.KeyCode.W then evadeFlyKeys.W = 1
+    elseif input.KeyCode == Enum.KeyCode.S then evadeFlyKeys.S = -1
+    elseif input.KeyCode == Enum.KeyCode.A then evadeFlyKeys.A = -1
+    elseif input.KeyCode == Enum.KeyCode.D then evadeFlyKeys.D = 1 end
+end)
+UserInputService.InputEnded:Connect(function(input, isProcessed)
+    if isProcessed then return end
+    if input.KeyCode == Enum.KeyCode.W then evadeFlyKeys.W = 0
+    elseif input.KeyCode == Enum.KeyCode.S then evadeFlyKeys.S = 0
+    elseif input.KeyCode == Enum.KeyCode.A then evadeFlyKeys.A = 0
+    elseif input.KeyCode == Enum.KeyCode.D then evadeFlyKeys.D = 0 end
+end)
+
+-- 4 AUTO JUMP
+local autoJumpAtivo = false
+
+Tab6:CreateToggle({
+   Name = "4 Auto Jump",
+   CurrentValue = false,
+   Flag = "AutoJumpToggle",
+   Callback = function(Value)
+      autoJumpAtivo = Value
+      if autoJumpAtivo then
+         spawn(function()
+            while autoJumpAtivo do
+               local char = player.Character
+               if char and char:FindFirstChild("Humanoid") then
+                  char.Humanoid.Jump = true
+               end
+               -- Um pequeno delay para não travar o jogo, mas rápido o suficiente pra pular sem parar
+               task.wait(0.05) 
+            end
+         end)
+      end
+   end,
+})
+-- ==============================================
+-- ABA 7: ABA PARA ATIRADORES
+-- ==============================================
+local Tab7 = Window:CreateTab("aba para atiradores", 4483362458)
+
+local mirarNaCabeca = false
+
+local function getNearestPlayer()
+    local nearest = nil
+    local minDist = math.huge
+    local char = player.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
+                if p.Character.Humanoid.Health > 0 then
+                    local dist = (char.HumanoidRootPart.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        nearest = p
+                    end
+                end
+            end
+        end
+    end
+    return nearest
+end
+
+-- 1 AIMBOT (Gira o corpo)
+local aimbotAtiradorAtivo = false
+local aimbotAtiradorConn = nil
+
+Tab7:CreateToggle({
+   Name = "1 Aimbot",
+   CurrentValue = false,
+   Flag = "AimbotAtiradorToggle",
+   Callback = function(Value)
+      aimbotAtiradorAtivo = Value
+      if aimbotAtiradorAtivo then
+         aimbotAtiradorConn = RunService.RenderStepped:Connect(function()
+            local target = getNearestPlayer()
+            local char = player.Character
+            if target and char and char:FindFirstChild("HumanoidRootPart") and target.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = char.HumanoidRootPart
+                local targetPart = target.Character.HumanoidRootPart
+                
+                if mirarNaCabeca and target.Character:FindFirstChild("Head") then
+                    targetPart = target.Character.Head
+                end
+                
+                local tPos = targetPart.Position
+                hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
+            end
+         end)
+      else
+         if aimbotAtiradorConn then aimbotAtiradorConn:Disconnect() end
+      end
+   end,
+})
+
+-- 2 AIMLOCK (Trava a mira/câmera)
+local aimlockAtivo = false
+local aimlockConn = nil
+
+Tab7:CreateToggle({
+   Name = "2 Aimlock",
+   CurrentValue = false,
+   Flag = "AimlockToggle",
+   Callback = function(Value)
+      aimlockAtivo = Value
+      if aimlockAtivo then
+         aimlockConn = RunService.RenderStepped:Connect(function()
+            local target = getNearestPlayer()
+            if target and target.Character then
+                local targetPart = target.Character:FindFirstChild("HumanoidRootPart")
+                
+                if mirarNaCabeca and target.Character:FindFirstChild("Head") then
+                    targetPart = target.Character.Head
+                end
+                
+                if targetPart then
+                    local cam = workspace.CurrentCamera
+                    cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position)
+                end
+            end
+         end)
+      else
+         if aimlockConn then aimlockConn:Disconnect() end
+      end
+   end,
+})
+
+-- 3 ESP (Permanente Vermelho)
+local espAtivo = false
+local espObjects = {}
+
+local function createESP(plr)
+    if espObjects[plr.Name] then return end
+    
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESPRed"
+    highlight.FillColor = Color3.fromRGB(255, 0, 0)
+    highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0.1
+    
+    espObjects[plr.Name] = highlight
+    
+    if plr.Character then
+        highlight.Parent = plr.Character
+    end
+    
+    plr.CharacterAdded:Connect(function(newChar)
+        if espAtivo then
+            task.wait(0.5)
+            local hl = espObjects[plr.Name]
+            if hl then
+                hl.Parent = newChar
+            end
+        end
+    end)
+end
+
+local function removeESP()
+    for name, highlight in pairs(espObjects) do
+        if highlight then highlight:Destroy() end
+    end
+    espObjects = {}
+end
+
+Tab7:CreateToggle({
+   Name = "3 ESP (Permanente)",
+   CurrentValue = false,
+   Flag = "ESPToggle",
+   Callback = function(Value)
+      espAtivo = Value
+      if espAtivo then
+         for _, p in pairs(Players:GetPlayers()) do
+            if p ~= player then
+               createESP(p)
+            end
+         end
+         Players.PlayerAdded:Connect(function(p)
+            if espAtivo then createESP(p) end
+         end)
+      else
+         removeESP()
+      end
+   end,
+})
+
+-- 4 CAPA
+Tab7:CreateToggle({
+   Name = "4 Capa (Forçar mira na cabeça)",
+   CurrentValue = false,
+   Flag = "CapaToggle",
+   Callback = function(Value)
+      mirarNaCabeca = Value
+   end,
+})
+
+-- ==============================================
+-- ABA 8: ATIRADOR AIMBOT
+-- ==============================================
+local Tab8 = Window:CreateTab("atirador Aimbot", 4483362458)
+
+local botAutoFarmAtivo = false
+local vim = game:GetService("VirtualInputManager")
+
+Tab8:CreateToggle({
+   Name = "5 Bot (Autofarm - Atirar Automático)",
+   CurrentValue = false,
+   Flag = "BotAutofarmAtirador",
+   Callback = function(Value)
+      botAutoFarmAtivo = Value
+      if botAutoFarmAtivo then
+         spawn(function()
+            while botAutoFarmAtivo do
+               local target = getNearestPlayer()
+               if target and target.Character then
+                  local targetPart = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                  
+                  if targetPart then
+                     -- Trava a câmera no alvo
+                     local cam = workspace.CurrentCamera
+                     cam.CFrame = CFrame.new(cam.CFrame.Position, targetPart.Position)
+                     
+                     -- Simula o clique para atirar
+                     vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                     task.wait(0.05)
+                     vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                  end
+               end
+               task.wait(0.01) -- Tempo de resposta rápido para trocar de alvo instantaneamente
+            end
+         end)
+      end
+   end,
+})
+
+-- ==============================================
+-- ABA 9: CONSTRUA UM BARCO POR TESOURO
+-- ==============================================
+local Tab9 = Window:CreateTab("Construa um barco", 4483362458)
+
+local autoFarmBarcoAtivo = false
+
+Tab9:CreateToggle({
+   Name = "Auto Farm (Teleportes automáticos)",
+   CurrentValue = false,
+   Flag = "AutoFarmBarcoToggle",
+   Callback = function(Value)
+      autoFarmBarcoAtivo = Value
+      
+      if autoFarmBarcoAtivo then
+         spawn(function()
+            while autoFarmBarcoAtivo do
+               local char = player.Character
+               if char and char:FindFirstChild("HumanoidRootPart") then
+                  local hrp = char.HumanoidRootPart
+                  local ws = game:GetService("Workspace")
+                  
+                  -- Função segura para tentar pegar a parte e teleportar
+                  local function tentarTeleporte(caminho, tempoEspera)
+                     if not autoFarmBarcoAtivo then return false end
+                     -- Tenta rodar o caminho sem dar erro se a fase não existir
+                     local sucesso, parte = pcall(function() return caminho() end)
+                     if sucesso and parte and parte:IsA("BasePart") then
+                        hrp.CFrame = parte.CFrame * CFrame.new(0, 5, 0) -- Um pouco acima para não bugar no chão
+                        task.wait(tempoEspera)
+                        return true
+                     end
+                     return false
+                  end
+
+                  -- Sequência de Teleportes (2 Segundos cada)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage1.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage2.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage3.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage4.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage5.DarknessPart end, 2)
+                  
+                  tentarTeleporte(function() return ws.BoatStages.OtherStages.ElectronicStage.DarknessPart end, 2)
+                  
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage7.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage8.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage9.DarknessPart end, 2)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.CaveStage10.DarknessPart end, 2)
+
+                  -- Final (5 Segundos)
+                  tentarTeleporte(function() return ws.BoatStages.NormalStages.TheEnd.DashedLine.Part end, 5)
+               end
+               task.wait(1) -- Aguarda um segundo antes de reiniciar o loop do auto farm inteiro
+            end
+         end)
+      end
+   end,
+})
+
+Rayfield:Notify({
+   Title = "Hub Atualizado",
+   Content = "Abas 7, 8 e 9 carregadas com sucesso!",
+   Duration = 5,
+   Image = 4483362458,
+})
+-- ==============================================
+-- ABA 8: BOT DE LUTA (Battlegrounds / Jogo KJ)
+-- ==============================================
+local Tab8 = Window:CreateTab("Bot Luta", 4483362458)
+
+Tab8:CreateLabel("⚠️ AVISO: O USO DE BOTS PODE DAR BANIMENTO PERMANENTE! ⚠️")
+
+local function getNearestTargetLuta()
+    local nearest = nil
+    local minDist = math.huge
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
+    local myPos = char.HumanoidRootPart.Position
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
+            if p.Character.Humanoid.Health > 0 then
+                local dist = (myPos - p.Character.HumanoidRootPart.Position).Magnitude
+                if dist < minDist then
+                    minDist = dist
+                    nearest = p.Character
+                end
+            end
+        end
+    end
+
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") and obj ~= char then
+            if string.find(string.lower(obj.Name), "dummy") then
+                if obj.Humanoid.Health > 0 then
+                    local dist = (myPos - obj.HumanoidRootPart.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        nearest = obj
+                    end
+                end
+            end
+        end
+    end
+
+    return nearest
+end
+
+local botBattlegroundsAtivo = false
+local vim = game:GetService("VirtualInputManager")
+
+Tab8:CreateToggle({
+   Name = "1 Bot Luta (Aimbot Corporal + Dummies)",
+   CurrentValue = false,
+   Flag = "BotBattlegroundsToggle",
+   Callback = function(Value)
+      botBattlegroundsAtivo = Value
+      
+      if botBattlegroundsAtivo then
+         Rayfield:Notify({
+            Title = "⚠️ ALERTA DE RISCO ⚠️",
+            Content = "Risco de banimento permanente ativo!",
+            Duration = 5,
+         })
+         
+         spawn(function()
+            while botBattlegroundsAtivo do
+               local targetChar = getNearestTargetLuta()
+               local char = player.Character
+               
+               if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                  local hrp = char.HumanoidRootPart
+                  local tHrp = targetChar.HumanoidRootPart
+                  local hum = char.Humanoid
+                  
+                  local tPos = tHrp.Position
+                  
+                  -- Aimbot Corporal: Vira para o alvo, mas a câmera fica livre
+                  hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
+                  
+                  -- Persegue o alvo
+                  hum:MoveTo(tPos)
+                  
+                  -- Se chegar perto, bate e usa skill
+                  if (hrp.Position - tPos).Magnitude <= 15 then
+                     vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                     task.wait(0.05)
+                     vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                     
+                     local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
+                     local randomKey = skillKeys[math.random(1, #skillKeys)]
+                     
+                     vim:SendKeyEvent(true, randomKey, false, game)
+                     task.wait(0.05)
+                     vim:SendKeyEvent(false, randomKey, false, game)
+                  end
+               end
+               task.wait(0.05) 
+            end
+         end)
+      end
+   end,
+})
+
+-- ==============================================
+-- ABA 10: BOT DE GEAR (Ilha / 3 Gears)
+-- ==============================================
+local Tab10 = Window:CreateTab("Bot de Gear", 4483362458)
+
+Tab10:CreateLabel("⚠️ AVISO: Uso de Bot. Risco de banimento! ⚠️")
+
+local botGearAtivo = false
+
+local function getPlayersByDistance()
+    local closest = nil
+    local furthest = nil
+    local minDist = math.huge
+    local maxDist = 0
+    
+    local char = player.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return nil, nil, nil, nil end
+    local myPos = char.HumanoidRootPart.Position
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
+            if p.Character.Humanoid.Health > 0 then
+                local dist = (myPos - p.Character.HumanoidRootPart.Position).Magnitude
+                
+                if dist < minDist then
+                    minDist = dist
+                    closest = p.Character
+                end
+                
+                if dist > maxDist then
+                    maxDist = dist
+                    furthest = p.Character
+                end
+            end
+        end
+    end
+
+    return closest, minDist, furthest, maxDist
+end
+
+local function equipGear(slotNumber)
+    local char = player.Character
+    if not char then return nil end
+    local hum = char:FindFirstChild("Humanoid")
+    
+    local backpackItems = player.Backpack:GetChildren()
+    local equippedTool = char:FindFirstChildOfClass("Tool")
+    
+    if equippedTool then
+        hum:UnequipTools()
+        task.wait(0.1)
+        backpackItems = player.Backpack:GetChildren()
+    end
+    
+    local toolToEquip = backpackItems[slotNumber]
+    if toolToEquip and hum then
+        hum:EquipTool(toolToEquip)
+        return toolToEquip
+    end
+    return nil
+end
+
+Tab10:CreateToggle({
+   Name = "Ativar Bot de Gear",
+   CurrentValue = false,
+   Flag = "BotGearToggle",
+   Callback = function(Value)
+      botGearAtivo = Value
+      
+      if botGearAtivo then
+         spawn(function()
+            while botGearAtivo do
+               local char = player.Character
+               if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                  local hum = char.Humanoid
+                  local hrp = char.HumanoidRootPart
+                  
+                  local closest, minDist, furthest, maxDist = getPlayersByDistance()
+                  
+                  -- 1. MUITO PERTO: Gear 1 (Bomba) e corre
+                  if closest and minDist < 15 then
+                      local bomb = equipGear(1)
+                      if bomb then
+                          bomb:Activate()
+                          task.wait(0.2)
+                          
+                          local dirFuga = (hrp.Position - closest.HumanoidRootPart.Position).Unit
+                          local posFuga = hrp.Position + (dirFuga * 30)
+                          hum:MoveTo(posFuga)
+                          task.wait(1)
+                      end
+                      
+                  -- 2. LONGE: Movimentação aleatória + Gear 2 ou Gear 3
+                  elseif furthest then
+                      local posAleatoria = hrp.Position + Vector3.new(math.random(-20, 20), 0, math.random(-20, 20))
+                      hum:MoveTo(posAleatoria)
+                      
+                      hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(furthest.HumanoidRootPart.Position.X, hrp.Position.Y, furthest.HumanoidRootPart.Position.Z))
+                      
+                      local rayOrigin = hrp.Position
+                      local rayDirection = (furthest.HumanoidRootPart.Position - hrp.Position).Unit * maxDist
+                      local raycastParams = RaycastParams.new()
+                      raycastParams.FilterDescendantsInstances = {char}
+                      raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+                      
+                      local rayResult = workspace:Raycast(rayOrigin - Vector3.new(0, 5, 0), rayDirection, raycastParams)
+                      
+                      if rayResult and rayResult.Instance then
+                          local whiteGear = equipGear(3)
+                          if whiteGear then whiteGear:Activate() end
+                      else
+                          local gunGear = equipGear(2)
+                          if gunGear then gunGear:Activate() end
+                      end
+                  end
+               end
+               task.wait(0.3)
+            end
+         end)
+      end
+   end,
+})
 
