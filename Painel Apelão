@@ -1350,7 +1350,7 @@ Rayfield:Notify({
    Image = 4483362458,
 })
 -- ==============================================
--- ABA 8: BOT DE LUTA (Battlegrounds / Jogo KJ)
+-- ABA 8: BOT DE LUTA 2.0 (Battlegrounds / Jogo KJ)
 -- ==============================================
 local Tab8 = Window:CreateTab("Bot Luta", 4483362458)
 
@@ -1363,6 +1363,7 @@ local function getNearestTargetLuta()
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local myPos = char.HumanoidRootPart.Position
 
+    -- Caça Jogadores
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
             if p.Character.Humanoid.Health > 0 then
@@ -1375,6 +1376,7 @@ local function getNearestTargetLuta()
         end
     end
 
+    -- Caça Dummies
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") and obj ~= char then
             if string.find(string.lower(obj.Name), "dummy") then
@@ -1396,7 +1398,7 @@ local botBattlegroundsAtivo = false
 local vim = game:GetService("VirtualInputManager")
 
 Tab8:CreateToggle({
-   Name = "1 Bot Luta (Aimbot Corporal + Dummies)",
+   Name = "1 Bot Luta (Combo + Dash Q + Aimbot)",
    CurrentValue = false,
    Flag = "BotBattlegroundsToggle",
    Callback = function(Value)
@@ -1404,8 +1406,8 @@ Tab8:CreateToggle({
       
       if botBattlegroundsAtivo then
          Rayfield:Notify({
-            Title = "⚠️ ALERTA DE RISCO ⚠️",
-            Content = "Risco de banimento permanente ativo!",
+            Title = "⚠️ MODO DESTRUIÇÃO ⚠️",
+            Content = "Bot com combos reais ativado! Cuidado com ban.",
             Duration = 5,
          })
          
@@ -1420,25 +1422,43 @@ Tab8:CreateToggle({
                   local hum = char.Humanoid
                   
                   local tPos = tHrp.Position
+                  local dist = (hrp.Position - tPos).Magnitude
                   
-                  -- Aimbot Corporal: Vira para o alvo, mas a câmera fica livre
+                  -- Aimbot Corporal: Mantém o corpo focado no alvo
                   hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
                   
-                  -- Persegue o alvo
+                  -- Move na direção do alvo
                   hum:MoveTo(tPos)
                   
-                  -- Se chegar perto, bate e usa skill
-                  if (hrp.Position - tPos).Magnitude <= 15 then
-                     vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                     task.wait(0.05)
-                     vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                     
-                     local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
-                     local randomKey = skillKeys[math.random(1, #skillKeys)]
-                     
-                     vim:SendKeyEvent(true, randomKey, false, game)
-                     task.wait(0.05)
-                     vim:SendKeyEvent(false, randomKey, false, game)
+                  -- Se estiver numa distância média, usa o Dash (Q) para encurtar
+                  if dist > 15 and dist <= 50 then
+                      vim:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+                      task.wait(0.05)
+                      vim:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                      task.wait(0.5) -- Espera o dash terminar
+                      
+                  -- Se estiver colado (alcance do soco), inicia o combo
+                  elseif dist <= 15 then
+                      -- Combo de 4 socos (M1)
+                      for i = 1, 4 do
+                          if not botBattlegroundsAtivo then break end
+                          vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                          task.wait(0.05)
+                          vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                          task.wait(0.2) -- Ritmo do soco
+                      end
+                      
+                      -- Finaliza o combo de socos jogando uma Skill (1, 2, 3 ou 4)
+                      if botBattlegroundsAtivo then
+                          local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
+                          local randomKey = skillKeys[math.random(1, #skillKeys)]
+                          
+                          vim:SendKeyEvent(true, randomKey, false, game)
+                          task.wait(0.05)
+                          vim:SendKeyEvent(false, randomKey, false, game)
+                          
+                          task.wait(1) -- Tempo de recuo/animação da skill antes de bater de novo
+                      end
                   end
                end
                task.wait(0.05) 
@@ -1447,6 +1467,8 @@ Tab8:CreateToggle({
       end
    end,
 })
+
+                
 
 -- ==============================================
 -- ABA 10: BOT DE GEAR (Ilha / 3 Gears)
