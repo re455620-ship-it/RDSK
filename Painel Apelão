@@ -1341,14 +1341,7 @@ Tab9:CreateToggle({
          end)
       end
    end,
-})
-
-Rayfield:Notify({
-   Title = "Hub Atualizado",
-   Contentdasasucessoegadas= "Abas 7, 8 e 9 carregadas coDurationo!",
-   Duration = 5,
-   Image = 4483362458,
-}) -  -- ==============================================
+}) -- ==============================================
 -- ABA 8: BOT DE LUTA 3.1 (Corrigido e Blindado)
 -- ==============================================
 local Tab8 = Window:CreateTab("Bot Luta", 4483362458)
@@ -1484,8 +1477,6 @@ Tab8:CreateToggle({
       end
    end,
 })
-
-
 -- ==============================================
 -- ABA 10: BOT DE GEAR (Ilha / 3 Gears)
 -- ==============================================
