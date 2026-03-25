@@ -1348,8 +1348,7 @@ Rayfield:Notify({
    Contentdasasucessoegadas= "Abas 7, 8 e 9 carregadas coDurationo!",
    Duration = 5,
    Image = 4483362458,
-}) 
--- ==============================================
+}) -- ==============================================
 -- ABA 8: BOT DE LUTA 3.0 (Battlegrounds / Jogo KJ)
 -- ==============================================
 local Tab8 = Window:CreateTab("Bot Luta", 4483362458)
