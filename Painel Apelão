@@ -1348,23 +1348,24 @@ Rayfield:Notify({
    Contentdasasucessoegadas= "Abas 7, 8 e 9 carregadas coDurationo!",
    Duration = 5,
    Image = 4483362458,
-}) -- ==============================================
--- ABA 8: BOT DE LUTA 3.0 (Battlegrounds / Jogo KJ)
+}) -  -- ==============================================
+-- ABA 8: BOT DE LUTA 3.1 (Corrigido e Blindado)
 -- ==============================================
 local Tab8 = Window:CreateTab("Bot Luta", 4483362458)
 
-Tab8:CreateLabel("⚠️ MODO APELAÇÃO ATIVADO! Risco de Ban. ⚠️")
+Tab8:CreateLabel("⚠️ BOT OTIMIZADO - APELAÇÃO PURA ⚠️")
 
--- Detector de alvos otimizado (Para acabar com os travamentos)
+-- Função blindada para buscar alvos sem travar o Roblox
 local function getNearestTargetLuta()
     local nearest = nil
     local minDist = math.huge
+    local player = game.Players.LocalPlayer
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local myPos = char.HumanoidRootPart.Position
 
     -- 1. Caça Jogadores
-    for _, p in pairs(Players:GetPlayers()) do
+    for _, p in pairs(game.Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
             if p.Character.Humanoid.Health > 0 then
                 local dist = (myPos - p.Character.HumanoidRootPart.Position).Magnitude
@@ -1376,8 +1377,8 @@ local function getNearestTargetLuta()
         end
     end
 
-    -- 2. Caça Dummies (Busca leve para não bugar ou travar o jogo)
-    for _, obj in pairs(workspace:GetChildren()) do 
+    -- 2. Caça Dummies
+    for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") and obj ~= char then
             if string.find(string.lower(obj.Name), "dummy") then
                 if obj.Humanoid.Health > 0 then
@@ -1398,98 +1399,68 @@ local botBattlegroundsAtivo = false
 local vim = game:GetService("VirtualInputManager")
 
 Tab8:CreateToggle({
-   Name = "1 Bot Luta (Combo 4 Hits + Dash Guiado)",
+   Name = "1 Bot Luta (Combo 4 Hits + Dash Q)",
    CurrentValue = false,
    Flag = "BotBattlegroundsToggle",
    Callback = function(Value)
       botBattlegroundsAtivo = Value
-      local char = player.Character
+      local player = game.Players.LocalPlayer
       
-      -- Sistema de Aimbot Anti-Bug (BodyGyro)
-      local bg = nil
-      if char and char:FindFirstChild("HumanoidRootPart") then
-          -- Se já tiver um antigo, remove
-          if char.HumanoidRootPart:FindFirstChild("BotAimbotGyro") then
-              char.HumanoidRootPart.BotAimbotGyro:Destroy()
-          end
-          bg = Instance.new("BodyGyro")
-          bg.Name = "BotAimbotGyro"
-          bg.MaxTorque = Vector3.new(0, 400000, 0) -- Gira apenas para os lados
-          bg.P = 15000 -- Força do giro
-          bg.D = 100
-      end
-
       if botBattlegroundsAtivo then
-         Rayfield:Notify({
-            Title = "🤖 BOT 3.0",
-            Content = "Combo de 4 hits e Mira Suave ativados!",
-            Duration = 3,
-         })
-         
-         spawn(function()
-            local isAttacking = false -- Impede o bot de bugar e cancelar os próprios ataques
+         task.spawn(function()
+            local isAttacking = false
             
             while botBattlegroundsAtivo do
                local targetChar = getNearestTargetLuta()
-               char = player.Character
+               local char = player.Character
                
                if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
                   local hrp = char.HumanoidRootPart
                   local tHrp = targetChar.HumanoidRootPart
                   local hum = char.Humanoid
                   
-                  -- Garante que o BodyGyro exista no boneco
-                  if not bg or bg.Parent ~= hrp then
-                      if hrp:FindFirstChild("BotAimbotGyro") then
-                          bg = hrp.BotAimbotGyro
-                      elseif bg then
-                          bg.Parent = hrp
-                      end
-                  end
-                  
                   local tPos = tHrp.Position
                   local dist = (hrp.Position - tPos).Magnitude
                   
-                  -- Aimbot Corporal Permanente: O BodyGyro faz seu boneco olhar pro alvo
-                  -- Isso garante que Dash (Q) e Poderes vão exatamente na direção do cara!
-                  if bg then
-                      bg.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
-                  end
+                  -- Aimbot Corporal: Vira para o alvo cravando o eixo Y (sua câmera fica salva)
+                  hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
                   
                   if not isAttacking then
-                      if dist > 15 and dist <= 45 then
-                          -- Usa o Dash (Q) guiado pelo Aimbot
+                      if dist > 15 and dist <= 50 then
+                          -- Usa o Dash (Q) para colar no inimigo
+                          hum:MoveTo(tPos)
                           vim:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
                           task.wait(0.05)
                           vim:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-                          task.wait(0.6) -- Tempo para o Dash chegar no alvo
-                      elseif dist <= 15 then
-                          -- INICIA O COMBO PERFEITO DE 4 HITS
-                          isAttacking = true
-                          hum:MoveTo(hrp.Position) -- Para de andar para não cancelar o soco
+                          task.wait(0.5) -- Espera o dash acabar
                           
-                          -- 4 Socos (M1) garantidos
+                      elseif dist <= 15 then
+                          -- MODO COMBO: Para de andar e foca em bater
+                          isAttacking = true
+                          hum:MoveTo(hrp.Position) 
+                          
+                          -- Executa exatamente os 4 socos
                           for i = 1, 4 do
                               if not botBattlegroundsAtivo then break end
                               
-                              -- Atualiza a mira no meio do combo
-                              if targetChar:FindFirstChild("HumanoidRootPart") and bg then
-                                  bg.CFrame = CFrame.new(hrp.Position, Vector3.new(targetChar.HumanoidRootPart.Position.X, hrp.Position.Y, targetChar.HumanoidRootPart.Position.Z))
+                              -- Mantém a mira travada no inimigo caso ele tente pular ou dar dash no meio do seu combo
+                              if targetChar:FindFirstChild("HumanoidRootPart") then
+                                  hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(targetChar.HumanoidRootPart.Position.X, hrp.Position.Y, targetChar.HumanoidRootPart.Position.Z))
                               end
                               
                               vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
                               task.wait(0.05)
                               vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
                               
-                              -- O último soco tem um delay maior para a animação do inimigo caindo
+                              -- Pausa exata de um jogador pro, com tempo maior no último soco pro cara cair
                               if i == 4 then
-                                  task.wait(0.5) 
+                                  task.wait(0.4) 
                               else
-                                  task.wait(0.3) -- Ritmo exato dos 3 primeiros socos
+                                  task.wait(0.25)
                               end
                           end
                           
-                          -- USA O PODER INSTANTANEAMENTE APÓS O 4º SOCO COM A MIRA CRAVADA
+                          -- Solta a habilidade impiedosamente no final do combo
                           if botBattlegroundsAtivo and targetChar:FindFirstChild("HumanoidRootPart") then
                               local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
                               local randomKey = skillKeys[math.random(1, #skillKeys)]
@@ -1497,37 +1468,23 @@ Tab8:CreateToggle({
                               vim:SendKeyEvent(true, randomKey, false, game)
                               task.wait(0.05)
                               vim:SendKeyEvent(false, randomKey, false, game)
-                              
-                              task.wait(1.5) -- Cooldown para a animação da skill terminar
+                              task.wait(1.2) -- Espera a animação do poder acabar
                           end
                           
-                          isAttacking = false -- Libera o bot para caçar de novo
+                          isAttacking = false
                       else
-                          -- Apenas corre atrás se estiver muito longe
+                          -- Se o alvo estiver muito longe (fora do alcance do dash), ele só persegue
                           hum:MoveTo(tPos)
                       end
-                  end
-               else
-                  -- Se não tiver alvo, desativa a mira forçada para você poder andar de boa
-                  if bg and bg.Parent then
-                      bg.Parent = nil
                   end
                end
                task.wait(0.05) 
             end
-            
-            -- Limpa o giroscópio ao desativar o bot
-            if bg then bg:Destroy() end
          end)
-      else
-         -- Garante a limpeza do Aimbot se desligar rápido
-         local char = player.Character
-         if char and char:FindFirstChild("HumanoidRootPart") and char.HumanoidRootPart:FindFirstChild("BotAimbotGyro") then
-             char.HumanoidRootPart.BotAimbotGyro:Destroy()
-         end
       end
    end,
 })
+
 
 -- ==============================================
 -- ABA 10: BOT DE GEAR (Ilha / 3 Gears)
