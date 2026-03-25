@@ -1342,23 +1342,23 @@ Tab9:CreateToggle({
       end
    end,
 }) -- ==============================================
--- ABA 8: BOT DE LUTA 3.1 (Corrigido e Blindado)
+-- ABA 8: BOTS
 -- ==============================================
-local Tab8 = Window:CreateTab("Bot Luta", 4483362458)
+local Tab8 = Window:CreateTab("Bots", 4483362458)
 
-Tab8:CreateLabel("⚠️ BOT OTIMIZADO - APELAÇÃO PURA ⚠️")
+-- Aviso logo de cara
+Tab8:CreateLabel("⚠️ AVISO: O USO DE BOTS PODE DAR BANIMENTO PERMANENTE! ⚠️")
 
--- Função blindada para buscar alvos sem travar o Roblox
-local function getNearestTargetLuta()
+-- Função para encontrar o alvo mais próximo (Jogadores E Dummies)
+local function getNearestTarget()
     local nearest = nil
     local minDist = math.huge
-    local player = game.Players.LocalPlayer
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return nil end
     local myPos = char.HumanoidRootPart.Position
 
-    -- 1. Caça Jogadores
-    for _, p in pairs(game.Players:GetPlayers()) do
+    -- 1. Checa os Jogadores
+    for _, p in pairs(Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
             if p.Character.Humanoid.Health > 0 then
                 local dist = (myPos - p.Character.HumanoidRootPart.Position).Magnitude
@@ -1370,9 +1370,10 @@ local function getNearestTargetLuta()
         end
     end
 
-    -- 2. Caça Dummies
+    -- 2. Checa os Dummies no Workspace
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Model") and obj:FindFirstChild("Humanoid") and obj:FindFirstChild("HumanoidRootPart") and obj ~= char then
+            -- Verifica se o nome contém "Dummy" (ignora maiúsculas/minúsculas)
             if string.find(string.lower(obj.Name), "dummy") then
                 if obj.Humanoid.Health > 0 then
                     local dist = (myPos - obj.HumanoidRootPart.Position).Magnitude
@@ -1392,91 +1393,69 @@ local botBattlegroundsAtivo = false
 local vim = game:GetService("VirtualInputManager")
 
 Tab8:CreateToggle({
-   Name = "1 Bot Luta (Combo 4 Hits + Dash Q)",
+   Name = "1 Bot Luta (Battlegrounds + Dummies + Dash)",
    CurrentValue = false,
    Flag = "BotBattlegroundsToggle",
    Callback = function(Value)
       botBattlegroundsAtivo = Value
-      local player = game.Players.LocalPlayer
       
       if botBattlegroundsAtivo then
-         task.spawn(function()
-            local isAttacking = false
-            
+         -- Notificação de perigo quando ativa
+         Rayfield:Notify({
+            Title = "⚠️ ALERTA DE RISCO ⚠️",
+            Content = "O uso desta função pode resultar em BANIMENTO PERMANENTE!",
+            Duration = 5,
+         })
+         
+         spawn(function()
             while botBattlegroundsAtivo do
-               local targetChar = getNearestTargetLuta()
+               local targetChar = getNearestTarget()
                local char = player.Character
                
-               if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
-                  local hrp = char.HumanoidRootPart
-                  local tHrp = targetChar.HumanoidRootPart
+               if targetChar and targetChar:FindFirstChild("HumanoidRootPart") and char and char:FindFirstChild("Humanoid") then
+                  local hrp = char:FindFirstChild("HumanoidRootPart")
+                  local tHrp = targetChar:FindFirstChild("HumanoidRootPart")
                   local hum = char.Humanoid
                   
-                  local tPos = tHrp.Position
-                  local dist = (hrp.Position - tPos).Magnitude
-                  
-                  -- Aimbot Corporal: Vira para o alvo cravando o eixo Y (sua câmera fica salva)
-                  hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(tPos.X, hrp.Position.Y, tPos.Z))
-                  
-                  if not isAttacking then
-                      if dist > 15 and dist <= 50 then
-                          -- Usa o Dash (Q) para colar no inimigo
-                          hum:MoveTo(tPos)
-                          vim:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
-                          task.wait(0.05)
-                          vim:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
-                          task.wait(0.5) -- Espera o dash acabar
-                          
-                      elseif dist <= 15 then
-                          -- MODO COMBO: Para de andar e foca em bater
-                          isAttacking = true
-                          hum:MoveTo(hrp.Position) 
-                          
-                          -- Executa exatamente os 4 socos
-                          for i = 1, 4 do
-                              if not botBattlegroundsAtivo then break end
-                              
-                              -- Mantém a mira travada no inimigo caso ele tente pular ou dar dash no meio do seu combo
-                              if targetChar:FindFirstChild("HumanoidRootPart") then
-                                  hrp.CFrame = CFrame.new(hrp.Position, Vector3.new(targetChar.HumanoidRootPart.Position.X, hrp.Position.Y, targetChar.HumanoidRootPart.Position.Z))
-                              end
-                              
-                              vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
-                              task.wait(0.05)
-                              vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
-                              
-                              -- Pausa exata de um jogador pro, com tempo maior no último soco pro cara cair
-                              if i == 4 then
-                                  task.wait(0.4) 
-                              else
-                                  task.wait(0.25)
-                              end
-                          end
-                          
-                          -- Solta a habilidade impiedosamente no final do combo
-                          if botBattlegroundsAtivo and targetChar:FindFirstChild("HumanoidRootPart") then
-                              local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
-                              local randomKey = skillKeys[math.random(1, #skillKeys)]
-                              
-                              vim:SendKeyEvent(true, randomKey, false, game)
-                              task.wait(0.05)
-                              vim:SendKeyEvent(false, randomKey, false, game)
-                              task.wait(1.2) -- Espera a animação do poder acabar
-                          end
-                          
-                          isAttacking = false
-                      else
-                          -- Se o alvo estiver muito longe (fora do alcance do dash), ele só persegue
-                          hum:MoveTo(tPos)
-                      end
+                  if hrp and tHrp then
+                     local dist = (hrp.Position - tHrp.Position).Magnitude
+                     
+                     -- O Bot persegue o alvo (Jogador ou Dummy)
+                     hum:MoveTo(tHrp.Position)
+                     
+                     -- Dash (Q) para se aproximar rapidamente se estiver longe (entre 15 e 50 studs)
+                     if dist > 15 and dist <= 50 then
+                        vim:SendKeyEvent(true, Enum.KeyCode.Q, false, game)
+                        task.wait(0.05)
+                        vim:SendKeyEvent(false, Enum.KeyCode.Q, false, game)
+                        task.wait(0.5) -- Pequeno delay para o dash não spammar de forma bugada
+                     end
+                     
+                     -- Se chegar a 15 studs de distância, começa a bater
+                     if dist <= 15 then
+                        
+                        -- Simula o clique do mouse (Soco)
+                        vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                        task.wait(0.05)
+                        vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                        
+                        -- Base de uso de skills (aleatório por enquanto, como é só a base)
+                        local skillKeys = {Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four}
+                        local randomKey = skillKeys[math.random(1, #skillKeys)]
+                        
+                        vim:SendKeyEvent(true, randomKey, false, game)
+                        task.wait(0.05)
+                        vim:SendKeyEvent(false, randomKey, false, game)
+                     end
                   end
                end
-               task.wait(0.05) 
+               task.wait(0.1) -- Loop rápido para caçar o próximo alvo
             end
          end)
       end
    end,
 })
+
 -- ==============================================
 -- ABA 10: BOT DE GEAR (Ilha / 3 Gears)
 -- ==============================================
