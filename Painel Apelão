@@ -1578,4 +1578,268 @@ Tab10:CreateToggle({
       end
    end,
 })
+-- ==============================================
+-- ABA 9: MURDER MYSTERY 2 (MM2) - PRIVADO
+-- ==============================================
+local Tab9 = Window:CreateTab("MM2", 4483362458)
+
+Tab9:CreateLabel("⚔️ MODO DETECTIVE & MURDER - SEU SCRIPT PRIVADO ⚔️")
+
+local espAtivo = false
+local autoCoinAtivo = false
+local autoShotAtivo = false
+local localPlayer = game.Players.LocalPlayer
+local vim = game:GetService("VirtualInputManager")
+
+-- Função auxiliar para identificar as funções de cada jogador no MM2
+local function getPlayerRole(p)
+    if not p or not p.Character then return "Innocent" end
+    
+    -- Checa se está segurando a faca ou se ela está no inventário
+    if p.Character:FindFirstChild("Knife") or p.Backpack:FindFirstChild("Knife") then
+        return "Murder"
+    -- Checa se está segurando a arma ou se ela está no inventário
+    elseif p.Character:FindFirstChild("Gun") or p.Backpack:FindFirstChild("Gun") then
+        return "Sheriff"
+    end
+    return "Innocent"
+end
+
+-- ==============================================
+-- 1. ESP (MURDER, SHERIFF, INNOCENT)
+-- ==============================================
+Tab9:CreateToggle({
+   Name = "1 ESP REVELADOR (Funções e Cores)",
+   CurrentValue = false,
+   Flag = "MM2_ESP_Toggle",
+   Callback = function(Value)
+      espAtivo = Value
+      
+      if espAtivo then
+         task.spawn(function()
+            while espAtivo do
+               for _, p in pairs(game.Players:GetPlayers()) do
+                  if p ~= localPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                     local hrp = p.Character.HumanoidRootPart
+                     
+                     -- Se não tiver o Highlight (brilho), cria um
+                     local highlight = hrp:FindFirstChild("MM2_ESP")
+                     if not highlight then
+                        highlight = Instance.new("Highlight")
+                        highlight.Name = "MM2_ESP"
+                        highlight.Parent = hrp
+                        highlight.FillOpacity = 0.5
+                        highlight.OutlineOpacity = 1
+                     end
+                     
+                     -- Define a cor baseada no cargo real do jogador
+                     local role = getPlayerRole(p)
+                     if role == "Murder" then
+                        highlight.FillColor = Color3.fromRGB(255, 0, 0) -- Vermelho pro Murder
+                        highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+                     elseif role == "Sheriff" then
+                        highlight.FillColor = Color3.fromRGB(0, 0, 255) -- Azul pro Xerife
+                        highlight.OutlineColor = Color3.fromRGB(0, 0, 255)
+                     else
+                        highlight.FillColor = Color3.fromRGB(0, 255, 0) -- Verde pro Inocente
+                        highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
+                     end
+                  end
+               end
+               task.wait(1) -- Atualiza o cargo dos jogadores a cada 1 segundo
+            end
+         end)
+      else
+         -- Limpa o ESP ao desativar
+         for _, p in pairs(game.Players:GetPlayers()) do
+            if p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+               local hl = p.Character.HumanoidRootPart:FindFirstChild("MM2_ESP")
+               if hl then hl:Destroy() end
+            end
+         end
+      end
+   end,
+})
+
+-- ==============================================
+-- 2. TELEPORT TO GUN (PEGAR ARMA CAÍDA)
+-- ==============================================
+Tab9:CreateButton({
+   Name = "2 Teleportar para Arma Caída (Pegar Gun)",
+   Callback = function()
+      local char = localPlayer.Character
+      if char and char:FindFirstChild("HumanoidRootPart") then
+         -- Procura a arma dropada no Workspace do MM2
+         local gunDrop = workspace:FindFirstChild("GunDrop") or workspace:FindFirstChild("Gun") or workspace:FindFirstChild("GunPickup")
+         
+         if not gunDrop then
+            -- Busca profunda caso esteja escondida dentro de algum modelo
+            for _, obj in pairs(workspace:GetDescendants()) do
+               if obj.Name == "GunDrop" or obj.Name == "GunPickup" then
+                  gunDrop = obj
+                  break
+               end
+            end
+         end
+         
+         if gunDrop then
+            local targetPos = gunDrop:IsA("Model") and gunDrop:GetPivot().Position or gunDrop.Position
+            char.HumanoidRootPart.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
+            Rayfield:Notify({Title = "🔫 TP GUN", Content = "Teleportado para a arma com sucesso!", Duration = 3})
+         else
+            Rayfield:Notify({Title = "❌ ERRO", Content = "A arma ainda não foi dropada no chão!", Duration = 3})
+         end
+      end
+   end,
+})
+
+-- ==============================================
+-- 3. AUTO COIN FARM (COLETAR MOEDAS)
+-- ==============================================
+Tab9:CreateToggle({
+   Name = "3 Auto Farm de Moedas (Teleport)",
+   CurrentValue = false,
+   Flag = "MM2_Coin_Toggle",
+   Callback = function(Value)
+      autoCoinAtivo = Value
+      
+      if autoCoinAtivo then
+         task.spawn(function()
+            while autoCoinAtivo do
+               local char = localPlayer.Character
+               if char and char:FindFirstChild("HumanoidRootPart") then
+                  local achouMoeda = false
+                  
+                  -- Varre o mapa procurando as moedas do MM2
+                  for _, obj in pairs(workspace:GetDescendants()) do
+                     if not autoCoinAtivo then break end
+                     if obj:IsA("Part") and (obj.Name == "Coin_Near" or obj.Name == "Coin" or string.find(string.lower(obj.Name), "coin")) then
+                        achouMoeda = true
+                        -- Teleporta em cima da moeda
+                        char.HumanoidRootPart.CFrame = CFrame.new(obj.Position)
+                        task.wait(0.3) -- Delay seguro para o jogo registrar a coleta
+                     end
+                  end
+                  
+                  if not achouMoeda then
+                     task.wait(1) -- Se não tiver moeda no mapa, espera um pouco para procurar de novo
+                  end
+               end
+               task.wait(0.1)
+            end
+         end)
+      end
+   end,
+})
+
+-- ==============================================
+-- 4. AUTO TIRO NO MURDER (CIRCULO VISUAL)
+-- ==============================================
+Tab9:CreateToggle({
+   Name = "4 Auto Tiro no Murder (Aimbot Trigger)",
+   CurrentValue = false,
+   Flag = "MM2_AutoShot_Toggle",
+   Callback = function(Value)
+      autoShotAtivo = Value
+      
+      -- Criação do círculo visual na tela do jogador
+      local circle = Drawing.new("Circle")
+      circle.Color = Color3.fromRGB(255, 0, 0)
+      circle.Thickness = 2
+      circle.Radius = 150
+      circle.Filled = false
+      circle.Position = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+      circle.Visible = autoShotAtivo
+      
+      if autoShotAtivo then
+         task.spawn(function()
+            while autoShotAtivo do
+               circle.Position = Vector2.new(workspace.CurrentCamera.ViewportSize.X / 2, workspace.CurrentCamera.ViewportSize.Y / 2)
+               
+               -- Procura o Murder
+               local murderPlayer = nil
+               for _, p in pairs(game.Players:GetPlayers()) do
+                  if p ~= localPlayer and getPlayerRole(p) == "Murder" then
+                     murderPlayer = p
+                     break
+                  end
+               end
+               
+               -- Se o Murder for encontrado e estiver vivo
+               if murderPlayer and murderPlayer.Character and murderPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                  local mHrp = murderPlayer.Character.HumanoidRootPart
+                  local cam = workspace.CurrentCamera
+                  local screenPos, onScreen = cam:WorldToViewportPoint(mHrp.Position)
+                  
+                  if onScreen then
+                     local mousePos = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y / 2)
+                     local targetPos2D = Vector2.new(screenPos.X, screenPos.Y)
+                     local distance = (targetPos2D - mousePos).Magnitude
+                     
+                     -- Se o Murder estiver dentro do círculo vermelho
+                     if distance <= circle.Radius then
+                        -- Se você estiver com a arma equipada, atira!
+                        local char = localPlayer.Character
+                        if char and char:FindFirstChild("Gun") then
+                           -- Força a câmera a olhar pro Murder e simula o clique do tiro
+                           cam.CFrame = CFrame.new(cam.CFrame.Position, mHrp.Position)
+                           vim:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                           task.wait(0.05)
+                           vim:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                           task.wait(0.5) -- Delay entre tiros
+                        end
+                     end
+                  end
+               end
+               task.wait(0.05)
+            end
+            circle:Destroy()
+         end)
+      else
+         circle:Destroy()
+      end
+   end,
+})
+
+-- ==============================================
+-- 5. KILL ALL (APENAS PARA SE VOCÊ FOR O MURDER)
+-- ==============================================
+Tab9:CreateButton({
+   Name = "5 Kill All (Teleportar Atrás + Matar com Faca)",
+   Callback = function()
+      local char = localPlayer.Character
+      -- Garante que você está com a faca na mão ou no inventário
+      local knife = char:FindFirstChild("Knife") or localPlayer.Backpack:FindFirstChild("Knife")
+      
+      if not knife then
+         Rayfield:Notify({Title = "❌ ERRO", Content = "Você precisa ser o MURDER para usar o Kill All!", Duration = 3})
+         return
+      end
+      
+      -- Força equipar a faca
+      if knife.Parent == localPlayer.Backpack then
+         char.Humanoid:EquipTool(knife)
+         task.wait(0.2)
+      end
+      
+      Rayfield:Notify({Title = "😈 MANDANDO O COLO", Content = "Eliminando todos os sobreviventes...", Duration = 3})
+      
+      -- Executa o teleporte e ataque em cada jogador vivo
+      for _, p in pairs(game.Players:GetPlayers()) do
+         if p ~= localPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character:FindFirstChild("Humanoid") then
+            if p.Character.Humanoid.Health > 0 and getPlayerRole(p) ~= "Murder" then
+               
+               -- Teleporta exatamente atrás do jogador (distância de 2 studs)
+               local enemyHrp = p.Character.HumanoidRootPart
+               char.HumanoidRootPart.CFrame = enemyHrp.CFrame * CFrame.new(0, 0, 2)
+               task.wait(0.15)
+               
+               -- Ativa a faca para matar o alvo
+               knife:Activate()
+               task.wait(0.1)
+            end
+         end
+      end
+   end,
+})
 
