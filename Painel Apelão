@@ -1932,3 +1932,106 @@ Tab9:CreateToggle({
       end
    end,
 })
+-- ==============================================
+-- ABA 2: BROOKHAVEN (PRO - VOAR, FLING & ANTI-BAN)
+-- ==============================================
+local Tab2 = Window:CreateTab("Brookhaven", 4483362458)
+
+-- 1. CARROS VOADORES (CFrame Mira)
+local vooCarroAtivo = false
+Tab2:CreateToggle({
+   Name = "1 Carro Voador (CFrame Mira)",
+   CurrentValue = false,
+   Callback = function(Value)
+      vooCarroAtivo = Value
+      task.spawn(function()
+         while vooCarroAtivo do
+            local char = game.Players.LocalPlayer.Character
+            local hum = char and char:FindFirstChild("Humanoid")
+            local seat = hum and hum.SeatPart
+            
+            if seat and seat:IsA("VehicleSeat") then
+               local car = seat.Parent
+               -- Voa pra cima + CFrame na direção da câmera
+               local cam = workspace.CurrentCamera
+               car:PivotTo(car:GetPivot() + (cam.CFrame.LookVector * 2) + Vector3.new(0, 0.5, 0))
+            end
+            task.wait(0.01)
+         end
+      end)
+   end,
+})
+
+-- 2. ANTIBAN (Reseta o Círculo Vermelho ao morrer)
+Tab2:CreateToggle({
+   Name = "2 Anti-Ban (Auto-Fix Status)",
+   CurrentValue = false,
+   Callback = function(Value)
+      _G.AntiBan = Value
+      game.Players.LocalPlayer.CharacterAdded:Connect(function(char)
+         if _G.AntiBan then
+            task.wait(1)
+            -- Remove qualquer highlight ou marcador de ban que o jogo coloque
+            for _, v in pairs(char:GetDescendants()) do
+               if v:IsA("Highlight") or v.Name == "BanCircle" then v:Destroy() end
+            end
+         end
+      end)
+   end,
+})
+
+-- ==============================================
+-- CATEGORIA: FLING (BROOKHAVEN)
+-- ==============================================
+Tab2:CreateSection("Categoria: Fling (Ônibus & Bola)")
+
+Tab2:CreateDropdown({
+   Name = "Selecione uma forma de Fling",
+   Options = {"Ônibus", "Bola"},
+   CurrentOption = "",
+   Callback = function(Option)
+      local player = game.Players.LocalPlayer
+      local target = nil -- Você pode integrar com um seletor de alvo aqui
+      
+      -- Lista de todos os jogadores para escolher o primeiro como alvo de teste
+      for _, p in pairs(game.Players:GetPlayers()) do
+         if p ~= player then target = p.Character break end
+      end
+
+      if not target then return end
+
+      if Option == "Ônibus" then
+         -- Spawna o ônibus pelo nome interno do jogo (geralmente 'Bus')
+         local bus = workspace:FindFirstChild("Bus") or workspace:FindFirstChild("SchoolBus")
+         if bus and bus:FindFirstChild("VehicleSeat") then
+            player.Character.HumanoidRootPart.CFrame = bus.VehicleSeat.CFrame
+            task.wait(0.2)
+            player.Character.Humanoid:Sit(bus.VehicleSeat)
+            
+            -- Lógica de Fling
+            task.spawn(function()
+               for i = 1, 50 do
+                  bus:PivotTo(target.HumanoidRootPart.CFrame * CFrame.new(0, 0, 0))
+                  task.wait(0.05)
+               end
+            end)
+         end
+
+      elseif Option == "Bola" then
+         -- Nome do item de bola interna do Brookhaven
+         local ball = workspace:FindFirstChild("SoccerBall") or workspace:FindFirstChild("Ball")
+         if ball then
+            ball.CanCollide = true
+            ball.Velocity = Vector3.new(0, 0, 0)
+            
+            task.spawn(function()
+               for i = 1, 50 do
+                  ball.CFrame = target.HumanoidRootPart.CFrame
+                  player.Character.HumanoidRootPart.CFrame = target.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0)
+                  task.wait(0.05)
+               end
+            end)
+         end
+      end
+   end,
+})
