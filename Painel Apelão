@@ -2035,3 +2035,59 @@ Tab2:CreateDropdown({
       end
    end,
 })
+-- ==============================================
+-- ABA 10: LEAFT APEL (AUTO FARM & RECICLAGEM)
+-- ==============================================
+local Tab10 = Window:CreateTab("Leaft apel", 4483362458)
+
+Tab10:CreateLabel("⚡ MODO LEAFT APEL - OTIMIZADO ⚡")
+
+-- Funções Internas
+local function autoReciclagem()
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj.Name == "ScrapRecycler" and obj:IsA("Model") then
+            local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+            if prompt then
+                fireproximityprompt(prompt)
+            end
+        end
+    end
+end
+
+local function autoFarm()
+    local alvos = {"Gold", "Diamond", "Copper"}
+    for _, obj in pairs(workspace:GetDescendants()) do
+        for _, nome in pairs(alvos) do
+            if string.find(obj.Name, nome) then
+                local prompt = obj:FindFirstChildWhichIsA("ProximityPrompt", true)
+                if prompt and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = obj.CFrame
+                    task.wait(0.6) 
+                    fireproximityprompt(prompt)
+                end
+            end
+        end
+    end
+end
+
+-- Botões da Aba 10
+Tab10:CreateButton({
+   Name = "1 Auto Reciclagem",
+   Callback = function()
+      autoReciclagem()
+   end,
+})
+
+Tab10:CreateToggle({
+   Name = "2 Auto Farm (Gold/Diamond/Copper)",
+   CurrentValue = false,
+   Callback = function(Value)
+      _G.AutoFarmAtivo = Value
+      task.spawn(function()
+         while _G.AutoFarmAtivo do
+            autoFarm()
+            task.wait(1)
+         end
+      end)
+   end,
+})
