@@ -1,0 +1,578 @@
+local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Lighting = game:GetService("Lighting")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+-- Variáveis de Estado
+local states = {
+    Caseoh = false,
+    Dup = false,
+    Farm1 = false,
+    Farm2 = false,
+    Farm3 = false,
+    Day = false,
+    Proximity = false,
+    CFrameSpeedActive = false,
+    Fly = false,
+    Noclip = false,
+    SpeedValue = 16,
+    JumpValue = 50,
+    Spin = false,
+    SpinForce = 100
+}
+local cframeSpeedValue = 16
+local lastDuplicateTime = 0
+
+-- UI Base
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RD_Hub_Official"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
+
+-- Botão Flutuante Preto Lateral - Redondo e Menor
+local OpenBtn = Instance.new("TextButton", ScreenGui)
+OpenBtn.Size = UDim2.new(0, 55, 0, 55)
+OpenBtn.Position = UDim2.new(0, 15, 0.5, -27)
+OpenBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+OpenBtn.Text = "(RD)"
+OpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+OpenBtn.Font = Enum.Font.GothamBold
+OpenBtn.TextSize = 14
+OpenBtn.Draggable = true
+
+local openCorner = Instance.new("UICorner", OpenBtn)
+openCorner.CornerRadius = UDim.new(1, 0)
+
+local openStroke = Instance.new("UIStroke", OpenBtn)
+openStroke.Color = Color3.fromRGB(45, 45, 45)
+openStroke.Thickness = 2
+
+-- Painel Principal Premium Fixado
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 540, 0, 340)
+MainFrame.Position = UDim2.new(0.5, -270, 0.5, -170)
+MainFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
+MainFrame.BorderSizePixel = 0
+MainFrame.Visible = false
+MainFrame.Draggable = true
+
+local mainCorner = Instance.new("UICorner", MainFrame)
+mainCorner.CornerRadius = UDim.new(0, 8)
+local mainStroke = Instance.new("UIStroke", MainFrame)
+mainStroke.Color = Color3.fromRGB(40, 40, 40)
+mainStroke.Thickness = 1
+
+-- Top Bar / Header
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 38)
+TopBar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+TopBar.BorderSizePixel = 0
+
+local topCorner = Instance.new("UICorner", TopBar)
+topCorner.CornerRadius = UDim.new(0, 8)
+
+local topCover = Instance.new("Frame", TopBar)
+topCover.Size = UDim2.new(1, 0, 0, 10)
+topCover.Position = UDim2.new(0, 0, 1, -10)
+topCover.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+topCover.BorderSizePixel = 0
+
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(0, 150, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.Text = "(RD)"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 15
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
+
+-- Barra Lateral Esquerda (Sidebar)
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 140, 1, -38)
+Sidebar.Position = UDim2.new(0, 0, 0, 38)
+Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+Sidebar.BorderSizePixel = 0
+Sidebar.ClipsDescendants = true
+
+local sideCorner = Instance.new("UICorner", Sidebar)
+sideCorner.CornerRadius = UDim.new(0, 8)
+local sideCover = Instance.new("Frame", Sidebar)
+sideCover.Size = UDim2.new(0, 15, 1, 0)
+sideCover.Position = UDim2.new(1, -15, 0, 0)
+sideCover.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+sideCover.BorderSizePixel = 0
+
+-- Painel de Conteúdo Direito
+local ContentFrame = Instance.new("Frame", MainFrame)
+ContentFrame.Size = UDim2.new(1, -145, 1, -38)
+ContentFrame.Position = UDim2.new(0, 145, 0, 38)
+ContentFrame.BackgroundTransparency = 1
+
+-- ==================== ABAS (SCROLLING CONTAINERS) ====================
+
+-- 1. Aba Principal
+local Page_Principal = Instance.new("ScrollingFrame", ContentFrame)
+Page_Principal.Size = UDim2.new(1, 0, 1, 0)
+Page_Principal.BackgroundTransparency = 1
+Page_Principal.ScrollBarThickness = 4
+Page_Principal.CanvasSize = UDim2.new(0, 0, 0, 420)
+Page_Principal.Visible = true
+
+local List_Principal = Instance.new("UIListLayout", Page_Principal)
+List_Principal.SortOrder = Enum.SortOrder.LayoutOrder
+List_Principal.Padding = UDim.new(0, 5)
+
+local Pad_Principal = Instance.new("UIPadding", Page_Principal)
+Pad_Principal.PaddingTop = UDim.new(0, 10)
+Pad_Principal.PaddingLeft = UDim.new(0, 5)
+Pad_Principal.PaddingRight = UDim.new(0, 12)
+
+-- 2. Aba Erros do Dev
+local Page_ErrosDev = Instance.new("ScrollingFrame", ContentFrame)
+Page_ErrosDev.Size = UDim2.new(1, 0, 1, 0)
+Page_ErrosDev.BackgroundTransparency = 1
+Page_ErrosDev.ScrollBarThickness = 4
+Page_ErrosDev.CanvasSize = UDim2.new(0, 0, 0, 350)
+Page_ErrosDev.Visible = false
+
+local List_ErrosDev = Instance.new("UIListLayout", Page_ErrosDev)
+List_ErrosDev.SortOrder = Enum.SortOrder.LayoutOrder
+List_ErrosDev.Padding = UDim.new(0, 5)
+
+local Pad_ErrosDev = Instance.new("UIPadding", Page_ErrosDev)
+Pad_ErrosDev.PaddingTop = UDim.new(0, 10)
+Pad_ErrosDev.PaddingLeft = UDim.new(0, 5)
+Pad_ErrosDev.PaddingRight = UDim.new(0, 12)
+
+-- 3. Aba Scripts Principais
+local Page_ScriptsPrincipais = Instance.new("ScrollingFrame", ContentFrame)
+Page_ScriptsPrincipais.Size = UDim2.new(1, 0, 1, 0)
+Page_ScriptsPrincipais.BackgroundTransparency = 1
+Page_ScriptsPrincipais.ScrollBarThickness = 4
+Page_ScriptsPrincipais.CanvasSize = UDim2.new(0, 0, 0, 350)
+Page_ScriptsPrincipais.Visible = false
+
+local List_ScriptsPrincipais = Instance.new("UIListLayout", Page_ScriptsPrincipais)
+List_ScriptsPrincipais.SortOrder = Enum.SortOrder.LayoutOrder
+List_ScriptsPrincipais.Padding = UDim.new(0, 5)
+
+local Pad_ScriptsPrincipais = Instance.new("UIPadding", Page_ScriptsPrincipais)
+Pad_ScriptsPrincipais.PaddingTop = UDim.new(0, 10)
+Pad_ScriptsPrincipais.PaddingLeft = UDim.new(0, 5)
+Pad_ScriptsPrincipais.PaddingRight = UDim.new(0, 12)
+
+-- ==================== POSICIONAMENTO MANUAL DOS BOTÕES DA SIDEBAR ====================
+
+local TabBtn_Principal = Instance.new("TextButton", Sidebar)
+TabBtn_Principal.Size = UDim2.new(1, -12, 0, 35)
+TabBtn_Principal.Position = UDim2.new(0, 6, 0, 10)
+TabBtn_Principal.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+TabBtn_Principal.Text = "  Principal"
+TabBtn_Principal.Font = Enum.Font.GothamBold
+TabBtn_Principal.TextColor3 = Color3.fromRGB(255, 255, 255)
+TabBtn_Principal.TextSize = 12
+TabBtn_Principal.TextXAlignment = Enum.TextXAlignment.Left
+
+local cornerP = Instance.new("UICorner", TabBtn_Principal)
+cornerP.CornerRadius = UDim.new(0, 5)
+
+local TabBtn_ErrosDev = Instance.new("TextButton", Sidebar)
+TabBtn_ErrosDev.Size = UDim2.new(1, -12, 0, 35)
+TabBtn_ErrosDev.Position = UDim2.new(0, 6, 0, 50)
+TabBtn_ErrosDev.BackgroundTransparency = 1
+TabBtn_ErrosDev.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+TabBtn_ErrosDev.Text = "  Erros do Dev"
+TabBtn_ErrosDev.Font = Enum.Font.Gotham
+TabBtn_ErrosDev.TextColor3 = Color3.fromRGB(150, 150, 150)
+TabBtn_ErrosDev.TextSize = 12
+TabBtn_ErrosDev.TextXAlignment = Enum.TextXAlignment.Left
+
+local cornerE = Instance.new("UICorner", TabBtn_ErrosDev)
+cornerE.CornerRadius = UDim.new(0, 5)
+
+local TabBtn_ScriptsPrincipais = Instance.new("TextButton", Sidebar)
+TabBtn_ScriptsPrincipais.Size = UDim2.new(1, -12, 0, 35)
+TabBtn_ScriptsPrincipais.Position = UDim2.new(0, 6, 0, 90)
+TabBtn_ScriptsPrincipais.BackgroundTransparency = 1
+TabBtn_ScriptsPrincipais.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+TabBtn_ScriptsPrincipais.Text = "  Scripts principais"
+TabBtn_ScriptsPrincipais.Font = Enum.Font.Gotham
+TabBtn_ScriptsPrincipais.TextColor3 = Color3.fromRGB(150, 150, 150)
+TabBtn_ScriptsPrincipais.TextSize = 12
+TabBtn_ScriptsPrincipais.TextXAlignment = Enum.TextXAlignment.Left
+
+local cornerS = Instance.new("UICorner", TabBtn_ScriptsPrincipais)
+cornerS.CornerRadius = UDim.new(0, 5)
+
+local function selectTab(tabName)
+    Page_Principal.Visible = (tabName == "Principal")
+    Page_ErrosDev.Visible = (tabName == "ErrosDev")
+    Page_ScriptsPrincipais.Visible = (tabName == "ScriptsPrincipais")
+    
+    TabBtn_Principal.BackgroundTransparency = (tabName == "Principal") and 0 or 1
+    TabBtn_Principal.Font = (tabName == "Principal") and Enum.Font.GothamBold or Enum.Font.Gotham
+    TabBtn_Principal.TextColor3 = (tabName == "Principal") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+    
+    TabBtn_ErrosDev.BackgroundTransparency = (tabName == "Dev" or tabName == "ErrosDev") and 0 or 1
+    TabBtn_ErrosDev.Font = (tabName == "Dev" or tabName == "ErrosDev") and Enum.Font.GothamBold or Enum.Font.Gotham
+    TabBtn_ErrosDev.TextColor3 = (tabName == "Dev" or tabName == "ErrosDev") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+    
+    TabBtn_ScriptsPrincipais.BackgroundTransparency = (tabName == "ScriptsPrincipais") and 0 or 1
+    TabBtn_ScriptsPrincipais.Font = (tabName == "ScriptsPrincipais") and Enum.Font.GothamBold or Enum.Font.Gotham
+    TabBtn_ScriptsPrincipais.TextColor3 = (tabName == "ScriptsPrincipais") and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
+end
+
+TabBtn_Principal.MouseButton1Click:Connect(function() selectTab("Principal") end)
+TabBtn_ErrosDev.MouseButton1Click:Connect(function() selectTab("ErrosDev") end)
+TabBtn_ScriptsPrincipais.MouseButton1Click:Connect(function() selectTab("ScriptsPrincipais") end)
+
+-- ==================== GERADORES DE INTERFACE ====================
+
+local function createRow(parentPage, name, isToggle, callback)
+    local rowFrame = Instance.new("Frame", parentPage)
+    rowFrame.Size = UDim2.new(1, 0, 0, 44)
+    rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    rowFrame.BorderSizePixel = 0
+    
+    local rowCorner = Instance.new("UICorner", rowFrame)
+    rowCorner.CornerRadius = UDim.new(0, 6)
+    
+    local label = Instance.new("TextLabel", rowFrame)
+    label.Size = UDim2.new(0.65, 0, 1, 0)
+    label.Position = UDim2.new(0, 14, 0, 0)
+    label.Text = name
+    label.Font = Enum.Font.GothamSemibold
+    label.TextColor3 = Color3.fromRGB(225, 225, 225)
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.BackgroundTransparency = 1
+    
+    local actionBtn = Instance.new("TextButton", rowFrame)
+    actionBtn.Size = UDim2.new(1, 0, 1, 0)
+    actionBtn.BackgroundTransparency = 1
+    actionBtn.Text = ""
+    
+    local indicator = Instance.new("TextLabel", rowFrame)
+    indicator.Size = UDim2.new(0, 100, 1, 0)
+    indicator.Position = UDim2.new(1, -115, 0, 0)
+    indicator.Font = Enum.Font.GothamBold
+    indicator.TextSize = 12
+    indicator.TextXAlignment = Enum.TextXAlignment.Right
+    indicator.BackgroundTransparency = 1
+    
+    if isToggle then
+        indicator.Text = "OFF"
+        indicator.TextColor3 = Color3.fromRGB(240, 90, 90)
+        
+        local active = false
+        actionBtn.MouseButton1Click:Connect(function()
+            active = not active
+            indicator.Text = active and "ON" or "OFF"
+            indicator.TextColor3 = active and Color3.fromRGB(90, 240, 90) or Color3.fromRGB(240, 90, 90)
+            rowFrame.BackgroundColor3 = active and Color3.fromRGB(36, 36, 36) or Color3.fromRGB(30, 30, 30)
+            callback(active)
+        end)
+    else
+        indicator.Text = "CLIQUE >"
+        indicator.TextColor3 = Color3.fromRGB(160, 160, 160)
+        
+        actionBtn.MouseButton1Click:Connect(function()
+            indicator.TextColor3 = Color3.fromRGB(255, 255, 100)
+            callback()
+            task.wait(0.1)
+            indicator.TextColor3 = Color3.fromRGB(160, 160, 160)
+        end)
+    end
+end
+
+local function createTextBoxRow(parentPage, name, min, max, defaultVal, placeholder, callback)
+    local rowFrame = Instance.new("Frame", parentPage)
+    rowFrame.Size = UDim2.new(1, 0, 0, 44)
+    rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    rowFrame.BorderSizePixel = 0
+    
+    local rowCorner = Instance.new("UICorner", rowFrame)
+    rowCorner.CornerRadius = UDim.new(0, 6)
+    
+    local label = Instance.new("TextLabel", rowFrame)
+    label.Size = UDim2.new(0.5, 0, 1, 0)
+    label.Position = UDim2.new(0, 14, 0, 0)
+    label.Text = name
+    label.Font = Enum.Font.GothamSemibold
+    label.TextColor3 = Color3.fromRGB(225, 225, 225)
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.BackgroundTransparency = 1
+    
+    local box = Instance.new("TextBox", rowFrame)
+    box.Size = UDim2.new(0, 90, 0, 26)
+    box.Position = UDim2.new(1, -105, 0.5, -13)
+    box.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    box.Text = tostring(defaultVal)
+    box.PlaceholderText = placeholder
+    box.TextColor3 = Color3.fromRGB(255, 255, 255)
+    box.Font = Enum.Font.GothamBold
+    box.TextSize = 12
+    box.BorderSizePixel = 0
+    
+    local boxCorner = Instance.new("UICorner", box)
+    boxCorner.CornerRadius = UDim.new(0, 4)
+    local boxStroke = Instance.new("UIStroke", box)
+    boxStroke.Color = Color3.fromRGB(50, 50, 50)
+    
+    box:GetPropertyChangedSignal("Text"):Connect(function()
+        local num = tonumber(box.Text)
+        if num then
+            if num > max then
+                box.Text = tostring(max)
+                num = max
+            elseif num < min then
+                box.Text = tostring(min)
+                num = min
+            end
+            callback(num)
+        end
+    end)
+end
+
+local function createSpeedRow(parentPage)
+    local rowFrame = Instance.new("Frame", parentPage)
+    rowFrame.Size = UDim2.new(1, 0, 0, 44)
+    rowFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    rowFrame.BorderSizePixel = 0
+    
+    local rowCorner = Instance.new("UICorner", rowFrame)
+    rowCorner.CornerRadius = UDim.new(0, 6)
+    
+    local label = Instance.new("TextLabel", rowFrame)
+    label.Size = UDim2.new(0.4, 0, 1, 0)
+    label.Position = UDim2.new(0, 14, 0, 0)
+    label.Text = "Velocidade CFrame"
+    label.Font = Enum.Font.GothamSemibold
+    label.TextColor3 = Color3.fromRGB(225, 225, 225)
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.BackgroundTransparency = 1
+    
+    local speedBox = Instance.new("TextBox", rowFrame)
+    speedBox.Size = UDim2.new(0, 65, 0, 26)
+    speedBox.Position = UDim2.new(0.48, 0, 0.5, -13)
+    speedBox.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+    speedBox.Text = "16"
+    speedBox.PlaceholderText = "0-70"
+    speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    speedBox.Font = Enum.Font.GothamBold
+    speedBox.TextSize = 12
+    speedBox.BorderSizePixel = 0
+    
+    local boxCorner = Instance.new("UICorner", speedBox)
+    boxCorner.CornerRadius = UDim.new(0, 4)
+    local boxStroke = Instance.new("UIStroke", speedBox)
+    boxStroke.Color = Color3.fromRGB(50, 50, 50)
+    
+    speedBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local num = tonumber(speedBox.Text)
+        if num then
+            if num > 70 then speedBox.Text = "70" cframeSpeedValue = 70
+            elseif num < 0 then speedBox.Text = "0" cframeSpeedValue = 0
+            else cframeSpeedValue = num end
+        end
+    end)
+    
+    local toggleBtn = Instance.new("TextButton", rowFrame)
+    toggleBtn.Size = UDim2.new(0, 80, 1, 0)
+    toggleBtn.Position = UDim2.new(1, -95, 0, 0)
+    toggleBtn.BackgroundTransparency = 1
+    toggleBtn.Text = "OFF"
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextColor3 = Color3.fromRGB(240, 90, 90)
+    toggleBtn.TextSize = 12
+    toggleBtn.TextXAlignment = Enum.TextXAlignment.Right
+    
+    local active = false
+    toggleBtn.MouseButton1Click:Connect(function()
+        active = not active
+        states.CFrameSpeedActive = active
+        toggleBtn.Text = active and "ON" or "OFF"
+        toggleBtn.TextColor3 = active and Color3.fromRGB(90, 240, 90) or Color3.fromRGB(240, 90, 90)
+        rowFrame.BackgroundColor3 = active and Color3.fromRGB(36, 36, 36) or Color3.fromRGB(30, 30, 30)
+    end)
+end
+
+-- ==================== POPULANDO AS ABAS ====================
+
+createRow(Page_Principal, "Sempre vira o Caseoh", true, function(v) states.Caseoh = v end)
+createRow(Page_Principal, "Duplicar becomeCase", true, function(v) states.Dup = v end)
+
+createRow(Page_Principal, "Auto Farm 1 (Multi-Names)", true, function(v) states.Farm1 = v end)
+createRow(Page_Principal, "Auto Farm 2 (Restaurant TP)", true, function(v) states.Farm2 = v end)
+createRow(Page_Principal, "Auto Farm 3 (Restaurant UI)", true, function(v) states.Farm3 = v end)
+
+createRow(Page_Principal, "Deletar Anti-Escape", false, function()
+    local target = workspace:FindFirstChild("antiEscape") or workspace:FindFirstChild("anti Escape")
+    if target then target:Destroy() end
+end)
+
+createRow(Page_Principal, "Sempre de Dia", true, function(v) states.Day = v end)
+
+-- Aba 2: Erros do Dev
+createRow(Page_ErrosDev, "Auto Proximity Prompts (Instant)", true, function(v) states.Proximity = v end)
+
+createRow(Page_ErrosDev, "Expulsar Itens do Inventário", false, function()
+    local backpack = LocalPlayer:FindFirstChild("Backpack")
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local tools = {}
+    for _, item in ipairs(backpack:GetChildren()) do
+        if item:IsA("Tool") then table.insert(tools, item) end
+    end
+    
+    for _, tool in ipairs(tools) do
+        tool.Parent = character task.wait(0.05)
+        tool.Parent = workspace
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if root and tool:FindFirstChild("Handle") then
+            tool.Handle.CFrame = root.CFrame * CFrame.new(0, 0, -3)
+        end
+        task.wait(0.05)
+    end
+end)
+
+createSpeedRow(Page_ErrosDev)
+
+-- Aba 3: Scripts Principais
+createRow(Page_ScriptsPrincipais, "Fly (CFrame)", true, function(v) states.Fly = v end)
+createRow(Page_ScriptsPrincipais, "Noclip (Atravessar Parede)", true, function(v) states.Noclip = v end)
+createRow(Page_ScriptsPrincipais, "Spin (Girar Boneco)", true, function(v) states.Spin = v end)
+
+createTextBoxRow(Page_ScriptsPrincipais, "Speed (0-1000)", 0, 1000, 16, "0-1000", function(val) states.SpeedValue = val end)
+createTextBoxRow(Page_ScriptsPrincipais, "Jumppower (0-1000)", 0, 1000, 50, "0-1000", function(val) states.JumpValue = val end)
+createTextBoxRow(Page_ScriptsPrincipais, "Força do Spin (0-1000)", 0, 1000, 100, "0-1000", function(val) states.SpinForce = val end)
+
+-- ==================== LOOPS DE SUPORTE ESTÁVEIS ====================
+
+local function setDayEnvironment()
+    Lighting.TimeOfDay = "12:00:00"
+    Lighting.Brightness = 2
+    Lighting.OutdoorAmbient = Color3.fromRGB(200, 200, 200)
+    Lighting.FogEnd = 100000
+    Lighting.FogStart = 0
+    Lighting.GlobalShadows = true
+    Lighting.GeographicLatitude = 0
+
+    for _, obj in pairs(Lighting:GetChildren()) do
+        if obj:IsA("Sky") then obj:Destroy() end
+    end
+
+    local newSky = Instance.new("Sky")
+    newSky.Name = "DaytimeSky"
+    local skyId = "rbxassetid://600834106"
+    newSky.SkyboxBk = skyId newSky.SkyboxDn = skyId newSky.SkyboxFt = skyId
+    newSky.SkyboxLf = skyId newSky.SkyboxRt = skyId newSky.SkyboxUp = skyId
+    newSky.SunTexture = "rbxassetid://619666503"
+    newSky.SunAngularSize = 15
+    newSky.Parent = Lighting
+end
+
+task.spawn(function()
+    while task.wait(3) do
+        if states.Day then setDayEnvironment() end
+    end
+end)
+
+-- Loop Proximity robusto com verificação anti-crash
+task.spawn(function()
+    while task.wait(0.3) do
+        if states.Proximity or states.Farm2 or states.Farm3 then
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if obj:IsA("ProximityPrompt") then
+                    obj.HoldDuration = 0
+                    if fireproximityprompt then fireproximityprompt(obj) end
+                end
+            end
+        end
+    end
+end)
+
+OpenBtn.MouseButton1Click:Connect(function()
+    MainFrame.Visible = not MainFrame.Visible
+end)
+
+-- ==================== LOOP PRINCIPAL DE EXECUÇÃO (HEARTBEAT) ====================
+
+RunService.Heartbeat:Connect(function(dt)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local root = char.HumanoidRootPart
+    local humanoid = char:FindFirstChild("Humanoid")
+
+    if humanoid then
+        humanoid.WalkSpeed = states.SpeedValue
+        humanoid.UseJumpPower = true
+        humanoid.JumpPower = states.JumpValue
+    end
+
+    if states.Fly and humanoid then
+        root.Velocity = Vector3.new(0, 0, 0)
+        if humanoid.MoveDirection.Magnitude > 0 then
+            local camera = workspace.CurrentCamera
+            root.CFrame = root.CFrame + (camera.CFrame.LookVector * (states.SpeedValue * dt))
+        end
+    end
+
+    if states.Noclip then
+        for _, part in ipairs(char:GetChildren()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+
+    if states.Spin then
+        root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(states.SpinForce * dt * 5), 0)
+    end
+
+    if states.Caseoh then
+        local target = workspace:FindFirstChild("becomeCase")
+        if target then root.CFrame = target:IsA("Model") and target:GetPivot() or target.CFrame end
+    end
+
+    if states.Dup and (tick() - lastDuplicateTime) > 1 then
+        local target = workspace:FindFirstChild("becomeCase")
+        if target then
+            local clone = target:Clone()
+            clone.Parent = workspace
+            if clone:IsA("BasePart") then clone.Position = target.Position + Vector3.new(0, 5, 0) 
+            elseif clone:IsA("Model") then clone:PivotTo(target:GetPivot() * CFrame.new(0, 5, 0)) end
+            lastDuplicateTime = tick()
+        end
+    end
+
+    if states.Farm1 then
+        local target = workspace:FindFirstChild("Escape") or workspace:FindFirstChild("escape") or workspace:FindFirstChild("ESCAPE") or workspace:FindFirstChild("escapa") or workspace:FindFirstChild("Escapa")
+        if target then root.CFrame = target:IsA("Model") and target:GetPivot() or target.CFrame end
+    end
+
+    if states.Farm2 or states.Farm3 then
+        local restaurant = workspace:FindFirstChild("Restaurant")
+        if restaurant then
+            local structure = restaurant:FindFirstChild("Structure")
+            if structure then
+                local part = structure:FindFirstChild("Part")
+                if part and part:IsA("BasePart") then
+                    root.CFrame = part.CFrame * CFrame.new(0, 2, 0)
+                end
+            end
+        end
+    end
+
+    if states.CFrameSpeedActive and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+        local baseWalkspeed = 16
+        local extraSpeed = cframeSpeedValue - baseWalkspeed
+        if extraSpeed > 0 then
+            root.CFrame = root.CFrame + (humanoid.MoveDirection * (extraSpeed * dt))
+        end
+    end
+end)
