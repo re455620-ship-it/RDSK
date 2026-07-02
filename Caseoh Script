@@ -528,17 +528,25 @@ RunService.Heartbeat:Connect(function(dt)
         root.Velocity = Vector3.new(0, 0, 0)
     end
 
-    -- Fly Direcional 3D via Câmera (Sem ser besta)
+    -- Fly Direcional 3D via Câmera corrigido (Sem inversão)
     if states.Fly then
         root.Velocity = Vector3.new(0, 0, 0)
         local camera = workspace.CurrentCamera
         if camera and humanoid then
             if humanoid.MoveDirection.Magnitude > 0 then
-                -- Move-se exatamente na direção apontada pela câmera tridimensionalmente
-                local moveDir = (camera.CFrame * CFrame.new(humanoid.MoveDirection.X, 0, humanoid.MoveDirection.Z)).Position - camera.CFrame.Position
-                root.CFrame = CFrame.new(root.Position, root.Position + camera.CFrame.LookVector) * CFrame.new(humanoid.MoveDirection.X * states.SpeedValue * dt, moveDir.Y * states.SpeedValue * dt, humanoid.MoveDirection.Z * states.SpeedValue * dt)
+                -- Calcula a direção correta projetando os inputs do jogador em relação à rotação real da câmera
+                local lookVectors = camera.CFrame.LookVector
+                local rightVectors = camera.CFrame.RightVector
+                
+                -- Inversão corrigida aplicando a direção correta sem eixos trocados
+                local moveDir = (lookVectors * -humanoid.MoveDirection.Z) + (rightVectors * humanoid.MoveDirection.X)
+                if moveDir.Magnitude > 0 then
+                    moveDir = moveDir.Unit
+                end
+                
+                root.CFrame = CFrame.new(root.Position, root.Position + lookVectors) * CFrame.new(humanoid.MoveDirection.X * states.SpeedValue * dt, (moveDir.Y * states.SpeedValue * dt), -humanoid.MoveDirection.Z * states.SpeedValue * dt)
             else
-                -- Trava o boneco no ar em vez de deixá-lo cair igual bobo
+                -- Estabiliza e trava o boneco perfeitamente pairando no ar sem cair
                 root.CFrame = CFrame.new(root.Position, root.Position + camera.CFrame.LookVector)
             end
         end
