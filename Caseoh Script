@@ -445,7 +445,7 @@ end)
 createSpeedRow(Page_ErrosDev)
 
 -- Aba 3: Scripts Principais
-createRow(Page_ScriptsPrincipais, "Fly (CFrame)", true, function(v) states.Fly = v end)
+createRow(Page_ScriptsPrincipais, "Fly (Controle de Câmera 3D)", true, function(v) states.Fly = v end)
 createRow(Page_ScriptsPrincipais, "Noclip (Atravessar Parede)", true, function(v) states.Noclip = v end)
 createRow(Page_ScriptsPrincipais, "Spin (Girar Boneco)", true, function(v) states.Spin = v end)
 
@@ -510,17 +510,37 @@ RunService.Heartbeat:Connect(function(dt)
     local root = char.HumanoidRootPart
     local humanoid = char:FindFirstChild("Humanoid")
 
+    -- Proteção Ativa Anti-Sit & Anti-Fling (Evita ir de vala)
     if humanoid then
+        humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        if humanoid.Sit then humanoid.Sit = false end
+        
         humanoid.WalkSpeed = states.SpeedValue
         humanoid.UseJumpPower = true
         humanoid.JumpPower = states.JumpValue
     end
-
-    if states.Fly and humanoid then
+    
+    -- Reseta velocidades angulares absurdas causadas por empurrões externos (Anti-Fling)
+    if root.RotVelocity.Magnitude > 50 and not states.Spin then
+        root.RotVelocity = Vector3.new(0, 0, 0)
+    end
+    if root.Velocity.Magnitude > 250 and not states.Fly and not states.Caseoh and not states.Farm1 and not states.Farm2 and not states.Farm3 then
         root.Velocity = Vector3.new(0, 0, 0)
-        if humanoid.MoveDirection.Magnitude > 0 then
-            local camera = workspace.CurrentCamera
-            root.CFrame = root.CFrame + (camera.CFrame.LookVector * (states.SpeedValue * dt))
+    end
+
+    -- Fly Direcional 3D via Câmera (Sem ser besta)
+    if states.Fly then
+        root.Velocity = Vector3.new(0, 0, 0)
+        local camera = workspace.CurrentCamera
+        if camera and humanoid then
+            if humanoid.MoveDirection.Magnitude > 0 then
+                -- Move-se exatamente na direção apontada pela câmera tridimensionalmente
+                local moveDir = (camera.CFrame * CFrame.new(humanoid.MoveDirection.X, 0, humanoid.MoveDirection.Z)).Position - camera.CFrame.Position
+                root.CFrame = CFrame.new(root.Position, root.Position + camera.CFrame.LookVector) * CFrame.new(humanoid.MoveDirection.X * states.SpeedValue * dt, moveDir.Y * states.SpeedValue * dt, humanoid.MoveDirection.Z * states.SpeedValue * dt)
+            else
+                -- Trava o boneco no ar em vez de deixá-lo cair igual bobo
+                root.CFrame = CFrame.new(root.Position, root.Position + camera.CFrame.LookVector)
+            end
         end
     end
 
