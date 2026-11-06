@@ -1,12 +1,14 @@
 {
-  "name": "rdsk-game-server",
+  "name": "ws-server",
   "version": "1.0.0",
-  "description": "Servidor WebSocket Node.js para o jogo 3D",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "ws": "^8.16.0"
+    "ws": "^8.22.1"
   }
 }
