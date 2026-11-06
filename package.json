@@ -1,15 +1,9 @@
 {
-  "name": "labirinto-zumbi-server",
+  "name": "zombie-labirinto-server",
   "version": "1.0.0",
-  "description": "Servidor WebSocket do Labirinto Zumbi (3 salas, ate 4 jogadores)",
+  "description": "Servidor do jogo Zombie Labirinto (3 servidores, 5 jogadores cada)",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "engines": {
-    "node": ">=18"
-  },
-  "dependencies": {
-    "ws": "^8.18.0"
-  }
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "ws": "^8.18.0" }
 }
