@@ -7,7 +7,7 @@ const { WebSocketServer, WebSocket } = require("ws");
 const PORT = process.env.PORT || 10000;
 const TICK = 20, DT = 1 / TICK;          // 20 atualizações por segundo
 const MAX_PLAYERS = 4;                   // até 4 jogadores por sala
-const MIN_PLAYERS = 2;                   // mínimo para começar a partida
+const MIN_PLAYERS = 1;                   // ajustado para 1 (começa mesmo sozinho para testes)
 const NUM_ROOMS = 3;                     // quantidade de salas
 const CELL = 400, COLS = 5, ROWS = 4, WW = COLS * CELL, WH = ROWS * CELL;
 const PR = 14, ZR = 14, PSPEED = 190;
