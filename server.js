@@ -2,6 +2,7 @@ import asyncio
 import json
 import random
 import websockets
+import os
 
 MAX_PLAYERS = 10
 MAP_SIZE = 400
@@ -11,13 +12,11 @@ bots = {}
 items = []
 vehicles = []
 
-# Lista de Armas solicitadas
 WEAPONS_LIST = ["SVD", "SMS", "AK447", "AWM"]
 
 def spawn_initial_world():
     global items, vehicles
     items = []
-    # Spawna armas pelo chão e casas
     for i in range(40):
         w_type = random.choice(WEAPONS_LIST)
         items.append({
@@ -27,7 +26,6 @@ def spawn_initial_world():
             "x": random.randint(-MAP_SIZE + 20, MAP_SIZE - 20),
             "z": random.randint(-MAP_SIZE + 20, MAP_SIZE - 20)
         })
-    # Spawna Kits Médicos
     for i in range(40, 60):
         items.append({
             "id": f"item_{i}",
@@ -37,7 +35,6 @@ def spawn_initial_world():
             "z": random.randint(-MAP_SIZE + 20, MAP_SIZE - 20)
         })
         
-    # Spawna carros pelo mapa
     vehicles = [
         {"id": f"car_{i}", "x": random.randint(-MAP_SIZE + 30, MAP_SIZE - 30), "z": random.randint(-MAP_SIZE + 30, MAP_SIZE - 30)}
         for i in range(8)
@@ -64,7 +61,6 @@ def update_bots():
         for i in range(len(current_bot_ids) - needed_bots):
             del bots[current_bot_ids[i]]
 
-    # Movimentação simples dos bots pelo mapa
     for b_id, bot in bots.items():
         bot["x"] += random.uniform(-0.5, 0.5)
         bot["z"] += random.uniform(-0.5, 0.5)
@@ -123,9 +119,7 @@ async def handler(websocket):
             del players[player_id]
 
 async def main():
-    import os
     port = int(os.environ.get("PORT", 8765))
-    
     async with websockets.serve(handler, "0.0.0.0", port):
         print(f"Servidor WebSocket rodando na porta {port}")
         await broadcast_game_state()
