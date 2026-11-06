@@ -6,30 +6,40 @@ const { WebSocketServer, WebSocket } = require("ws");
 // ======= CONFIG =======
 const PORT = process.env.PORT || 10000;
 const TICK = 20, DT = 1 / TICK;          // 20 atualizações por segundo
-const MAX_PLAYERS = 4;                   // máximo por servidor
+const MAX_PLAYERS = 4;                   // até 4 jogadores por sala
 const MIN_PLAYERS = 2;                   // mínimo para começar a partida
-const NUM_ROOMS = 3;                     // quantidade de servidores (salas)
+const NUM_ROOMS = 3;                     // quantidade de salas
 const CELL = 400, COLS = 5, ROWS = 4, WW = COLS * CELL, WH = ROWS * CELL;
 const PR = 14, ZR = 14, PSPEED = 190;
 const COLORS = ["#e74c3c", "#3498db", "#f39c12", "#9b59b6", "#1abc9c"];
+
+// ======= ARSENAL DE ARMAS =======
 const WEAPONS = [
-  { name: "Pistola",  cd: 350,  dmg: 34, pellets: 1, spread: 0.02,  range: 550,  ammo: -1,  pierce: 1 },
-  { name: "Escopeta", cd: 800,  dmg: 20, pellets: 6, spread: 0.28,  range: 320,  ammo: 16,  pierce: 1 },
-  { name: "SMG",      cd: 90,   dmg: 12, pellets: 1, spread: 0.09,  range: 480,  ammo: 90,  pierce: 1 },
-  { name: "Revolver", cd: 600,  dmg: 65, pellets: 1, spread: 0.02,  range: 520,  ammo: 24,  pierce: 1 },
-  { name: "Rifle",    cd: 120,  dmg: 20, pellets: 1, spread: 0.05,  range: 700,  ammo: 60,  pierce: 1 },
-  { name: "Sniper",   cd: 1100, dmg: 90, pellets: 1, spread: 0.005, range: 1100, ammo: 10,  pierce: 3 },  // atravessa até 3 zumbis
-  { name: "Minigun",  cd: 45,   dmg: 8,  pellets: 1, spread: 0.14,  range: 420,  ammo: 200, pierce: 1 },
+  { name: "Pistola",          cd: 350,  dmg: 34, pellets: 1, spread: 0.02,  range: 550,  ammo: -1,  pierce: 1 },
+  { name: "Escopeta",         cd: 800,  dmg: 20, pellets: 6, spread: 0.28,  range: 320,  ammo: 16,  pierce: 1 },
+  { name: "SMG",              cd: 90,   dmg: 12, pellets: 1, spread: 0.09,  range: 480,  ammo: 90,  pierce: 1 },
+  { name: "Revolver",         cd: 600,  dmg: 65, pellets: 1, spread: 0.02,  range: 520,  ammo: 24,  pierce: 1 },
+  { name: "Rifle",            cd: 120,  dmg: 20, pellets: 1, spread: 0.05,  range: 700,  ammo: 60,  pierce: 1 },
+  { name: "Sniper",           cd: 1100, dmg: 90, pellets: 1, spread: 0.005, range: 1100, ammo: 10,  pierce: 3 },
+  { name: "Minigun",          cd: 45,   dmg: 8,  pellets: 1, spread: 0.14,  range: 420,  ammo: 200, pierce: 1 },
+  { name: "Lança-Chamas",     cd: 60,   dmg: 6,  pellets: 3, spread: 0.35,  range: 250,  ammo: 150, pierce: 99 },
+  { name: "Balestra",         cd: 700,  dmg: 80, pellets: 1, spread: 0.01,  range: 800,  ammo: 20,  pierce: 2 },
+  { name: "Lança-Granadas",   cd: 1200, dmg: 120,pellets: 1, spread: 0.08,  range: 450,  ammo: 8,   pierce: 1 },
+  { name: "Raio Laser",       cd: 500,  dmg: 110,pellets: 1, spread: 0.00,  range: 1200, ammo: 15,  pierce: 5 }
 ];
-// tipo do pickup = índice da arma; peso = chance de aparecer
-const PICK_TABLE = [[1, 22], [2, 22], [3, 18], [4, 18], [5, 12], [6, 8]];
+
+const PICK_TABLE = [
+  [1, 15], [2, 15], [3, 14], [4, 12], [5, 10], 
+  [6, 7],  [7, 6],  [8, 8],  [9, 6],  [10, 4], [11, 3]
+];
+
 function pickType() {
   let r = Math.random() * PICK_TABLE.reduce((s, [, w]) => s + w, 0);
   for (const [t, w] of PICK_TABLE) { if ((r -= w) < 0) return t; }
   return 1;
 }
 
-// ======= MAPA (cidade com casas quadradas, igual para todos) =======
+// ======= MAPA =======
 function mulberry(a) {
   return () => {
     a |= 0; a = (a + 0x6d2b79f5) | 0;
@@ -59,12 +69,14 @@ function hitsWall(x, y, r) {
   }
   return false;
 }
+
 function tryMove(e, mx, my, r) {
   if (!hitsWall(e.x + mx, e.y + my, r)) { e.x += mx; e.y += my; return true; }
   if (mx !== 0 && !hitsWall(e.x + mx, e.y, r)) { e.x += mx; return true; }
   if (my !== 0 && !hitsWall(e.x, e.y + my, r)) { e.y += my; return true; }
   return false;
 }
+
 function rayBox(ox, oy, dx, dy, h) {
   let tmin = 0, tmax = Infinity;
   const axes = [[ox, dx, h.x, h.x + h.w], [oy, dy, h.y, h.y + h.h]];
@@ -79,6 +91,7 @@ function rayBox(ox, oy, dx, dy, h) {
   }
   return tmin;
 }
+
 function rayCircle(ox, oy, dx, dy, cx, cy, r) {
   const fx = cx - ox, fy = cy - oy, t = fx * dx + fy * dy;
   if (t < 0) return Infinity;
@@ -86,6 +99,7 @@ function rayCircle(ox, oy, dx, dy, cx, cy, r) {
   if (d2 > r * r) return Infinity;
   return Math.max(0, t - Math.sqrt(r * r - d2));
 }
+
 function openSpot(avoid) {
   for (let i = 0; i < 40; i++) {
     const x = 40 + Math.random() * (WW - 80), y = 40 + Math.random() * (WH - 80);
@@ -96,11 +110,11 @@ function openSpot(avoid) {
   return { x: 30, y: 30 };
 }
 
-// ======= HTTP (serve o index.html) =======
+// ======= HTTP =======
 const server = http.createServer((req, res) => {
   if (req.url === "/health") { res.writeHead(200); return res.end("ok"); }
   fs.readFile(path.join(__dirname, "index.html"), (err, data) => {
-    if (err) { res.writeHead(200); return res.end("Servidor WebSocket rodando"); }
+    if (err) { res.writeHead(200); return res.end("Servidor WebSocket RDSK STUDIO rodando"); }
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     res.end(data);
   });
@@ -120,10 +134,12 @@ const toRoom = (room, obj) => { const s = JSON.stringify(obj); for (const p of r
 function broadcastRooms() {
   const msg = JSON.stringify({
     t: "rooms",
+    credits: "RDSK STUDIO",
     rooms: rooms.map((r) => ({ id: r.id, count: r.players.size, max: MAX_PLAYERS, phase: r.phase, wave: r.wave })),
   });
   wss.clients.forEach((c) => { if (!c.room) send(c, msg); });
 }
+
 function sendRoster(room) {
   toRoom(room, { t: "roster", players: [...room.players.values()].map((p) => ({ id: p.id, name: p.name, color: p.color })) });
 }
@@ -157,11 +173,12 @@ function joinRoom(ws, roomId, name) {
   room.players.set(p.id, p);
   ws.room = room; ws.pid = p.id;
   send(ws, {
-    t: "joined", id: p.id, room: roomId, min: MIN_PLAYERS, ww: WW, wh: WH,
+    t: "joined", id: p.id, room: roomId, min: MIN_PLAYERS, max: MAX_PLAYERS, ww: WW, wh: WH,
     houses: houses.map((h) => [h.x, h.y, h.w, h.h]),
+    credits: "RDSK STUDIO"
   });
   sendRoster(room);
-  toRoom(room, { t: "chat", sys: true, text: p.name + " entrou" });
+  toRoom(room, { t: "chat", sys: true, text: p.name + " entrou na partida" });
   broadcastRooms();
 }
 
@@ -169,12 +186,13 @@ function joinRoom(ws, roomId, name) {
 function spawnPickup(room) {
   for (let i = 0; i < 20; i++) {
     const h = houses[Math.floor(Math.random() * houses.length)];
-    const x = Math.round(h.x + h.w / 2), y = Math.round(h.y + h.h + 20);   // na porta da casa
+    const x = Math.round(h.x + h.w / 2), y = Math.round(h.y + h.h + 20);
     if (hitsWall(x, y, 10)) continue;
     room.pickups.push({ id: room.np++, x, y, type: pickType() });
     return;
   }
 }
+
 function spawnZombie(room, alive) {
   const s = openSpot(alive.length ? alive : null);
   room.zombies.push({
@@ -183,11 +201,13 @@ function spawnZombie(room, alive) {
     side: Math.random() < 0.5 ? 1 : -1,
   });
 }
+
 function startWave(room) {
   room.wave++; room.phase = "playing";
   room.queue = Math.min(4 + room.wave * 3, 45); room.spawnT = 1;
   for (const p of room.players.values()) { p.hp = p.alive ? Math.min(100, p.hp + 30) : 100; p.alive = true; }
 }
+
 function startGame(room) {
   room.wave = 0; room.zombies = []; room.pickups = []; room.pickT = 0;
   for (const p of room.players.values()) {
@@ -224,9 +244,9 @@ function tickRoom(room, now) {
   const players = [...room.players.values()];
   const alive = players.filter((p) => p.alive);
 
-  // fases
-  if (room.phase === "waiting") { if (players.length >= MIN_PLAYERS) startGame(room); }
-  else if (room.phase === "playing") {
+  if (room.phase === "waiting") { 
+    if (players.length >= MIN_PLAYERS) startGame(room); 
+  } else if (room.phase === "playing") {
     if (room.queue > 0) {
       room.spawnT -= DT;
       if (room.spawnT <= 0 && room.zombies.length < 50) {
@@ -240,10 +260,13 @@ function tickRoom(room, now) {
     room.timer -= DT;
     if (room.timer <= 0) room.phase = "waiting";
   }
-  if ((room.phase === "playing" || room.phase === "between") && alive.length === 0) { room.phase = "over"; room.timer = 8; }
+
+  if ((room.phase === "playing" || room.phase === "between") && alive.length === 0) { 
+    room.phase = "over"; 
+    room.timer = 8; 
+  }
 
   if (room.phase === "playing" || room.phase === "between") {
-    // tiros
     for (const p of alive) if (p.f) fire(room, p, now);
     room.zombies = room.zombies.filter((z) => {
       if (z.hp > 0) return true;
@@ -251,7 +274,6 @@ function tickRoom(room, now) {
       return false;
     });
 
-    // zumbis
     for (const z of room.zombies) {
       let tgt = null, bd = 1e12;
       for (const p of alive) { const d = (p.x - z.x) ** 2 + (p.y - z.y) ** 2; if (d < bd) { bd = d; tgt = p; } }
@@ -274,7 +296,6 @@ function tickRoom(room, now) {
         }
       }
 
-    // armas no chão
     for (const p of alive)
       room.pickups = room.pickups.filter((w) => {
         if (Math.hypot(w.x - p.x, w.y - p.y) > PR + 12) return true;
@@ -285,13 +306,13 @@ function tickRoom(room, now) {
     if (room.pickups.length < 7 && room.pickT <= 0) { spawnPickup(room); room.pickT = 10; }
   }
 
-  // envia o estado (formato compacto)
   toRoom(room, {
     t: "s", ph: room.phase, wv: room.wave, tm: Math.ceil(room.timer),
     p: players.map((p) => [p.id, Math.round(p.x), Math.round(p.y), +p.a.toFixed(2), Math.max(0, Math.round(p.hp)), p.alive ? 1 : 0, p.weapon, p.ammo, p.score]),
     z: room.zombies.map((z) => [z.id, Math.round(z.x), Math.round(z.y), Math.round(z.hp)]),
     w: room.pickups.map((w) => [w.id, w.x, w.y, w.type]),
     e: room.shots,
+    studio: "RDSK STUDIO"
   });
   room.shots = [];
 }
@@ -303,6 +324,12 @@ setInterval(broadcastRooms, 2000);
 wss.on("connection", (ws) => {
   ws.isAlive = true; ws.room = null;
   ws.on("pong", () => (ws.isAlive = true));
+  
+  send(ws, {
+    t: "welcome",
+    credits: "RDSK STUDIO",
+    message: "Desenvolvido por RDSK STUDIO"
+  });
   broadcastRooms();
 
   ws.on("message", (data) => {
@@ -313,7 +340,7 @@ wss.on("connection", (ws) => {
     if (m.t === "chat" && ws.room) {
       const cp = ws.room.players.get(ws.pid);
       const t0 = Date.now();
-      if (!cp || t0 - (ws.lastChat || 0) < 600) return;      // anti-spam
+      if (!cp || t0 - (ws.lastChat || 0) < 600) return;
       ws.lastChat = t0;
       const text = String(m.text || "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, 100);
       if (text) toRoom(ws.room, { t: "chat", id: cp.id, name: cp.name, color: cp.color, text });
@@ -328,7 +355,6 @@ wss.on("connection", (ws) => {
       p.f = !!m.f && p.alive;
       let nx = Number(m.x), ny = Number(m.y);
       if (!isFinite(nx) || !isFinite(ny) || !p.alive) return;
-      // Movimento é calculado no cliente (sem lag); o servidor só valida
       const maxd = PSPEED * dt * 1.5 + 12, dx = nx - p.x, dy = ny - p.y, d = Math.hypot(dx, dy);
       let fix = false;
       if (d > maxd) { nx = p.x + (dx / d) * maxd; ny = p.y + (dy / d) * maxd; fix = d > 80; }
@@ -344,4 +370,4 @@ setInterval(() => {
   wss.clients.forEach((ws) => { if (ws.isAlive === false) return ws.terminate(); ws.isAlive = false; ws.ping(); });
 }, 30000);
 
-server.listen(PORT, () => console.log(`Servidor ouvindo na porta ${PORT}`));
+server.listen(PORT, () => console.log(`Servidor RDSK STUDIO rodando na porta ${PORT}`));
