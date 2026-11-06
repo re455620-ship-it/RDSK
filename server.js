@@ -1,164 +1,100 @@
+// Servidor do Zombie Labirinto
+// - 3 servidores (salas) independentes, até 5 jogadores em cada
+// - Repassa (relay) as mensagens de um jogador para os outros do mesmo servidor
+// - Também serve o jogo em "/" (public/index.html)
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { WebSocketServer } = require('ws');
 
-const WebSocket = require("ws");
-const { randomUUID } = require("crypto");
+const PORT = process.env.PORT || 3000;
+const SERVERS = 3;
+const MAX_PLAYERS = 5;
+const MAX_MSGS_PER_SEC = 150;
 
-const PORT = process.env.PORT || 10000;
-const MAX_PLAYERS = 10;
-const TICK_RATE = 30;
+const rooms = [null];
+for (let i = 1; i <= SERVERS; i++) rooms.push(new Set());
 
-const wss = new WebSocket.Server({
-  port: PORT,
-  perMessageDeflate: false
-});
-
-const players = new Map();
-
-function send(ws, data) {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(data));
-  }
-}
-
-function broadcast(data, except = null) {
-  const message = JSON.stringify(data);
-
-  for (const client of wss.clients) {
-    if (client !== except && client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  }
-}
-
-wss.on("connection", (ws) => {
-  if (players.size >= MAX_PLAYERS) {
-    send(ws, { type: "full", message: "Servidor lotado!" });
-    ws.close();
-    return;
-  }
-
-  const id = randomUUID();
-
-  const player = {
-    id,
-    name: "Jogador",
-    x: 0,
-    y: 0,
-    z: 0,
-    rotation: 0,
-    hp: 100,
-    alive: true
-  };
-
-  players.set(id, player);
-
-  send(ws, {
-    type: "welcome",
-    id,
-    players: Array.from(players.values())
-  });
-
-  broadcast({
-    type: "playerJoined",
-    player
-  }, ws);
-
-  ws.on("message", (raw) => {
-    try {
-      if (raw.length > 4096) return;
-
-      const data = JSON.parse(raw.toString());
-      const current = players.get(id);
-
-      if (!current) return;
-
-      switch (data.type) {
-        case "move": {
-          const { x, y, z, rotation } = data;
-
-          if (![x, y, z, rotation].every(Number.isFinite)) return;
-
-          if (
-            Math.abs(x) > 100000 ||
-            Math.abs(y) > 100000 ||
-            Math.abs(z) > 100000
-          ) return;
-
-          current.x = x;
-          current.y = y;
-          current.z = z;
-          current.rotation = rotation;
-
-          break;
-        }
-
-        case "chat": {
-          if (typeof data.message !== "string") return;
-
-          const message = data.message.trim().slice(0, 200);
-
-          if (!message) return;
-
-          broadcast({
-            type: "chat",
-            playerId: id,
-            name: current.name,
-            message,
-            timestamp: Date.now()
-          });
-
-          break;
-        }
-
-        case "setName": {
-          if (typeof data.name !== "string") return;
-
-          const name = data.name.trim().slice(0, 20);
-
-          if (name.length < 2) return;
-
-          current.name = name;
-
-          broadcast({
-            type: "playerUpdated",
-            player: current
-          });
-
-          break;
-        }
-
-        case "damage": {
-          // Base inicial: não aceita dano arbitrário de clientes.
-          // O combate será validado pelo servidor posteriormente.
-          break;
-        }
-      }
-    } catch {
-      // Ignora mensagens inválidas.
-    }
-  });
-
-  ws.on("close", () => {
-    players.delete(id);
-
-    broadcast({
-      type: "playerLeft",
-      id
+const server = http.createServer((req, res) => {
+  if (req.url === '/' || req.url === '/index.html') {
+    fs.readFile(path.join(__dirname, 'public', 'index.html'), (err, data) => {
+      if (err) { res.writeHead(500); res.end('index.html não encontrado'); return; }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(data);
     });
-  });
+  } else if (req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, players: rooms.slice(1).map(r => r.size) }));
+  } else {
+    res.writeHead(404); res.end('Não encontrado');
+  }
 });
 
+const wss = new WebSocketServer({ server, maxPayload: 16 * 1024 });
+
+const counts = () => rooms.slice(1).map(r => r.size);
+const infoMsg = () => JSON.stringify({ t: 'info', c: counts(), max: MAX_PLAYERS });
+
+function broadcastInfo() {
+  const msg = infoMsg();
+  for (const c of wss.clients) if (c.readyState === 1) c.send(msg);
+}
+
+wss.on('connection', (ws) => {
+  ws.alive = true;
+  ws.slot = 0;
+  ws.count = 0;
+  ws.winStart = Date.now();
+  ws.on('pong', () => { ws.alive = true; });
+  ws.send(infoMsg());
+
+  ws.on('message', (data, isBinary) => {
+    if (isBinary) return;
+    const text = data.toString();
+
+    // Ainda não entrou em nenhum servidor: só aceita "join"
+    if (!ws.slot) {
+      let m;
+      try { m = JSON.parse(text); } catch { return; }
+      if (!m || m.t !== 'join') return;
+      const n = m.s | 0;
+      if (n < 1 || n > SERVERS) return;
+      if (rooms[n].size >= MAX_PLAYERS) {
+        ws.send(JSON.stringify({ t: 'full', s: n }));
+        return;
+      }
+      rooms[n].add(ws);
+      ws.slot = n;
+      ws.send(JSON.stringify({ t: 'joined', s: n }));
+      broadcastInfo();
+      return;
+    }
+
+    // Limite simples de mensagens por segundo
+    const now = Date.now();
+    if (now - ws.winStart > 1000) { ws.winStart = now; ws.count = 0; }
+    if (++ws.count > MAX_MSGS_PER_SEC) return;
+
+    // Repassa para os outros jogadores do mesmo servidor
+    for (const c of rooms[ws.slot]) {
+      if (c !== ws && c.readyState === 1) c.send(text);
+    }
+  });
+
+  ws.on('close', () => {
+    if (ws.slot) { rooms[ws.slot].delete(ws); broadcastInfo(); }
+  });
+  ws.on('error', () => {});
+});
+
+// Derruba conexões mortas
 setInterval(() => {
-  if (players.size === 0) return;
+  for (const ws of wss.clients) {
+    if (!ws.alive) { ws.terminate(); continue; }
+    ws.alive = false;
+    ws.ping();
+  }
+}, 30000);
 
-  broadcast({
-    type: "worldUpdate",
-    players: Array.from(players.values())
-  });
-}, 1000 / TICK_RATE);
-
-wss.on("listening", () => {
-  console.log(`Servidor GTA RPG rodando na porta ${PORT}`);
-  console.log(`Limite: ${MAX_PLAYERS} jogadores`);
-});
-
-console.log("Iniciando servidor multiplayer...");
+server.listen(PORT, () => console.log('Zombie Labirinto rodando na porta ' + PORT));
+    
