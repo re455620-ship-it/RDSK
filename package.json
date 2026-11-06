@@ -1,6 +1,7 @@
 {
-  "name": "ws-server",
+  "name": "labirinto-zumbi-server",
   "version": "1.0.0",
+  "description": "Servidor WebSocket do Labirinto Zumbi (3 salas, ate 4 jogadores)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -9,6 +10,6 @@
     "node": ">=18"
   },
   "dependencies": {
-    "ws": "^8.22.1"
+    "ws": "^8.18.0"
   }
 }
