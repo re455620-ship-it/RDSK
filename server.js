@@ -6,17 +6,14 @@
 const WebSocket = require('ws');
 const http = require('http');
 
-// Criação do Servidor HTTP para satisfazer a verificação de porta das hospedagens (Render/Heroku)
 const PORT = process.env.PORT || 8080;
 const server = http.createServer((req, res) => {
   res.writeHead(200, { 'Content-Type': 'text/plain' });
   res.end('Servidor WebSocket de Zombie Co-op Online rodando perfeitamente!');
 });
 
-// Instanciação do WebSocket Server sobre o servidor HTTP
 const wss = new WebSocket.Server({ server });
 
-// Lista de palavras inadequadas para o filtro no servidor
 const BAD_WORDS = [
   'palavrao', 'hack', 'cheater', 'admin', 'moderator', 'fdp', 'porra', 'caralho', 
   'puta', 'viado', 'cu', 'bosta', 'merda', 'cacete', 'nigger', 'fuck', 'shit', 
@@ -33,8 +30,7 @@ function sanitizeText(text) {
   return clean;
 }
 
-// Estado global mantido no servidor
-const clients = new Map(); // Guarda dados de todos os jogadores conectados
+const clients = new Map();
 let gameState = {
   currentWave: 1,
   zombiesAlive: 0,
@@ -43,7 +39,6 @@ let gameState = {
 
 console.log(`[LOG] Iniciando Servidor WebSocket na porta ${PORT}...`);
 
-// Transmite mensagens para todos os clientes conectados (Broadcast)
 function broadcast(data, exceptSocket = null) {
   const payload = JSON.stringify(data);
   wss.clients.forEach(client => {
@@ -53,12 +48,10 @@ function broadcast(data, exceptSocket = null) {
   });
 }
 
-// Manipulação de conexões recebidas
 wss.on('connection', (ws, req) => {
   const playerId = 'p_' + Math.random().toString(36).substr(2, 7);
-  console.log(`[CONEXÃO] Novo jogador conectado: ID ${playerId} de IP: ${req.socket.remoteAddress}`);
+  console.log(`[CONEXÃO] Novo jogador conectado: ID ${playerId}`);
 
-  // Registra o novo jogador com atributos padrão
   const playerState = {
     id: playerId,
     name: 'Sobrevivente',
@@ -72,7 +65,6 @@ wss.on('connection', (ws, req) => {
 
   clients.set(ws, playerState);
 
-  // 1. Envia confirmação de boas-vindas com o ID do jogador e a onda atual
   ws.send(JSON.stringify({
     type: 'init',
     id: playerId,
@@ -80,13 +72,11 @@ wss.on('connection', (ws, req) => {
     players: Array.from(clients.values())
   }));
 
-  // 2. Notifica todos os outros jogadores sobre a entrada do novo companheiro
   broadcast({
     type: 'player_joined',
     player: playerState
   }, ws);
 
-  // Tratamento de mensagens recebidas dos clientes
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
@@ -94,12 +84,9 @@ wss.on('connection', (ws, req) => {
       if (!player) return;
 
       switch (data.type) {
-        // Atualização contínua de movimento e rotação
         case 'move':
           if (data.position) player.position = data.position;
           if (data.rotation) player.rotation = data.rotation;
-
-          // Repassa o movimento para os outros jogadores
           broadcast({
             type: 'player_moved',
             id: player.id,
@@ -108,7 +95,6 @@ wss.on('connection', (ws, req) => {
           }, ws);
           break;
 
-        // Atualização de tiro efetuado pelo jogador
         case 'shoot':
           broadcast({
             type: 'player_shot',
@@ -119,13 +105,11 @@ wss.on('connection', (ws, req) => {
           }, ws);
           break;
 
-        // Atualização de troca de arma ou alteração de status (HP, Morte)
         case 'status_update':
           if (data.hp !== undefined) player.hp = data.hp;
           if (data.isSpectator !== undefined) player.isSpectator = data.isSpectator;
           if (data.weaponKey) player.weapon = data.weaponKey;
           if (data.kills !== undefined) player.kills = data.kills;
-
           broadcast({
             type: 'player_status_changed',
             id: player.id,
@@ -136,7 +120,6 @@ wss.on('connection', (ws, req) => {
           }, ws);
           break;
 
-        // Troca de mensagens no Chat Global com Filtro Rigoroso
         case 'chat':
           const cleanMsg = sanitizeText(data.message);
           if (cleanMsg.length > 0) {
@@ -149,7 +132,6 @@ wss.on('connection', (ws, req) => {
           }
           break;
 
-        // Definição de Nickname na entrada do lobby
         case 'set_name':
           const cleanName = sanitizeText(data.name).substr(0, 15);
           player.name = cleanName || 'Sobrevivente';
@@ -160,22 +142,16 @@ wss.on('connection', (ws, req) => {
           });
           break;
 
-        // Sincronização da Onda de Zumbis
         case 'wave_clear':
           gameState.currentWave++;
-          // Ressuscitar todos os jogadores
           clients.forEach(p => {
             p.isSpectator = false;
             p.hp = 100;
           });
-
           broadcast({
             type: 'next_wave',
             currentWave: gameState.currentWave
           });
-          break;
-
-        default:
           break;
       }
     } catch (err) {
@@ -183,28 +159,18 @@ wss.on('connection', (ws, req) => {
     }
   });
 
-  // Tratamento quando o jogador se desconecta
   ws.on('close', () => {
     const player = clients.get(ws);
     if (player) {
-      console.log(`[DESCONEXÃO] Jogador desconectado: ${player.name} (${player.id})`);
       clients.delete(ws);
-
-      // Notifica os outros sobreviventes
       broadcast({
         type: 'player_left',
         id: player.id
       });
     }
   });
-
-  // Tratamento de erros do socket
-  ws.on('error', (err) => {
-    console.error(`[SOCKET ERRO]`, err);
-  });
 });
 
-// Inicializa o servidor HTTP/WebSocket
 server.listen(PORT, () => {
-  console.log(`[SERVIDOR OK] Rodando com sucesso na porta ${PORT}`);
+  console.log(`[SERVIDOR OK] Rodando na porta ${PORT}`);
 });
