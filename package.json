@@ -1,9 +1,12 @@
 {
-  "name": "zombie-labirinto-server",
+  "name": "eaglercraft-websocket-server",
   "version": "1.0.0",
-  "description": "Servidor do jogo Zombie Labirinto (3 servidores, 5 jogadores cada)",
+  "description": "Servidor WSS para Eaglercraft",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=18" },
-  "dependencies": { "ws": "^8.18.0" }
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  }
 }
