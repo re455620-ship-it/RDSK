@@ -1,7 +1,7 @@
 {
-  "name": "eaglercraft-websocket-server",
+  "name": "rdsk-server",
   "version": "1.0.0",
-  "description": "Servidor WSS para Eaglercraft",
+  "description": "Servidor 3v3 Retro FPS",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
